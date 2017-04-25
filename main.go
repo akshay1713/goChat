@@ -10,13 +10,12 @@ import (
 
 func main() {
 	ServerAddr, err := net.ResolveUDPAddr("udp", ":7041")
-	newPeerChan := make(chan string)
 	if err != nil {
 		fmt.Println("Err while resolving IP address", err)
 	}
 	peerConnections := make(map[string]*net.TCPConn)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
-	LocalAddr := initUDPBroadcast(newPeerChan)
+	LocalAddr := initUDPBroadcast(peerConnections)
 
 	if err != nil {
 		fmt.Println("Err while listening to the address", err)
@@ -38,19 +37,24 @@ func main() {
 			fmt.Println("Error: ", err)
 		}
 
-		if _, exists := peerConnections[addr.IP.String()]; !exists {
+		if _, exists := peerConnections[addr.String()]; !exists {
 			newConnection, err := connectToPeer(addr)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
 			}
-			fmt.Println("New peer joined")
-			peerConnections[addr.IP.String()] = newConnection
+
+			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
+			addPeerConnection(peerConnections, newConnection)
 		}
 	}
 }
 
-func addNewPeerConnection(peerAddr string, peerConn *net.TCPConn) {}
+func addPeerConnection(peerConnections map[string]*net.TCPConn, conn *net.TCPConn) {
+	peerConnections[conn.RemoteAddr().String()] = conn
+	conn.SetKeepAlive(true)
+	conn.SetKeepAlivePeriod(15 * time.Second)
+}
 
 func connectToPeer(udpAddr *net.UDPAddr) (*net.TCPConn, error) {
 	tcpAddr := net.TCPAddr{IP: udpAddr.IP, Port: udpAddr.Port}
@@ -58,7 +62,7 @@ func connectToPeer(udpAddr *net.UDPAddr) (*net.TCPConn, error) {
 	return chatConn, err
 }
 
-func initUDPBroadcast(newPeerChan chan string) net.Addr {
+func initUDPBroadcast(peerConnections map[string]*net.TCPConn) net.Addr {
 	ServerAddr, err := net.ResolveUDPAddr("udp", "192.168.1.255:7041")
 	if err != nil {
 		panic(err)
@@ -69,7 +73,7 @@ func initUDPBroadcast(newPeerChan chan string) net.Addr {
 	if err != nil {
 		panic(err)
 	}
-	go waitForTCP(LocalAddr, newPeerChan)
+	go waitForTCP(LocalAddr, peerConnections)
 
 	i := 0
 	go func() {
@@ -88,8 +92,7 @@ func initUDPBroadcast(newPeerChan chan string) net.Addr {
 	return LocalAddr
 }
 
-func waitForTCP(LocalAddr net.Addr, newPeerChan chan string) {
-	fmt.Println(LocalAddr)
+func waitForTCP(LocalAddr net.Addr, peerConnections map[string]*net.TCPConn) {
 	ip, _, _ := net.ParseCIDR(strings.Split(LocalAddr.String(), ":")[0])
 	port, _ := strconv.Atoi(strings.Split(LocalAddr.String(), ":")[1])
 	l, err := net.ListenTCP("tcp", &net.TCPAddr{
@@ -101,12 +104,12 @@ func waitForTCP(LocalAddr net.Addr, newPeerChan chan string) {
 		return
 	}
 	for {
-		conn, err := l.Accept()
-		remoteAddr := conn.RemoteAddr()
+		conn, err := l.AcceptTCP()
 		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
 			continue
 		}
-		newPeerChan <- remoteAddr.String()
+		fmt.Println("Adding connection ", conn.RemoteAddr().String())
+		addPeerConnection(peerConnections, conn)
 	}
 }
