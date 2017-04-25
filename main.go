@@ -37,7 +37,7 @@ func main() {
 			fmt.Println("Error: ", err)
 		}
 
-		if _, exists := peerConnections[addr.String()]; !exists {
+		if _, exists := peerConnections[addr.IP.String()]; !exists {
 			newConnection, err := connectToPeer(addr)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
@@ -51,7 +51,9 @@ func main() {
 }
 
 func addPeerConnection(peerConnections map[string]*net.TCPConn, conn *net.TCPConn) {
-	peerConnections[conn.RemoteAddr().String()] = conn
+	peerAddress := conn.RemoteAddr().String()
+	peerIP := strings.Split(peerAddress, ":")[0]
+	peerConnections[peerIP] = conn
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(15 * time.Second)
 }
@@ -105,11 +107,14 @@ func waitForTCP(LocalAddr net.Addr, peerConnections map[string]*net.TCPConn) {
 	}
 	for {
 		conn, err := l.AcceptTCP()
-		if err != nil {
-			fmt.Println("Error accepting: ", err.Error())
-			continue
+		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
+		if _, exists := peerConnections[peerIP]; !exists {
+			if err != nil {
+				fmt.Println("Error accepting: ", err.Error())
+				continue
+			}
+			fmt.Println("Adding connection ", conn.RemoteAddr().String())
+			addPeerConnection(peerConnections, conn)
 		}
-		fmt.Println("Adding connection ", conn.RemoteAddr().String())
-		addPeerConnection(peerConnections, conn)
 	}
 }
