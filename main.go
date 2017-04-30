@@ -19,7 +19,6 @@ func main() {
 		fmt.Println("Err while listening for connectionsl", err)
 		return
 	}
-	fmt.Println(l.Addr().String())
 	go waitForTCP(peerConnections, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
@@ -40,12 +39,10 @@ func main() {
 		if addr.IP.String()+":"+strconv.Itoa(addr.Port) == LocalAddr.String() {
 			continue
 		}
-		fmt.Println(string(buf), buf, len(buf), string(buf[0:len(appName)-1]))
 		if string(buf[0:len(appName)]) != appName {
 			continue
 		}
 		recvdPort, err := strconv.Atoi(string(buf[len(appName):]))
-		fmt.Println("Received ", buf)
 
 		if err != nil {
 			fmt.Println("Error: ", err)
@@ -115,11 +112,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]*net.TCP
 }
 
 func waitForTCP(peerConnections map[string]*net.TCPConn, listener net.Listener) {
-	// ip, _, _ := net.ParseCIDR(strings.Split(LocalAddr.String(), ":")[0])
-	// port, _ := strconv.Atoi(strings.Split(LocalAddr.String(), ":")[1])
-	fmt.Println("LISTEN TO ME!")
 	defer listener.Close()
-	fmt.Println("Listening on", listener.Addr().String)
 	for {
 		genericConn, err := listener.Accept()
 		if err != nil {
