@@ -19,7 +19,6 @@ func main() {
 		fmt.Println("Err while listening for connectionsl", err)
 		return
 	}
-	fmt.Println(l.Addr().String())
 	go waitForTCP(peerConnections, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
@@ -40,7 +39,6 @@ func main() {
 		if addr.IP.String()+":"+strconv.Itoa(addr.Port) == LocalAddr.String() {
 			continue
 		}
-		fmt.Println(string(buf), buf, len(buf), string(buf[0:len(appName)-1]))
 		if string(buf[0:len(appName)]) != appName {
 			continue
 		}
