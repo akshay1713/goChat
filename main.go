@@ -29,24 +29,30 @@ func main() {
 		fmt.Println("Err while listening to the address", err)
 	}
 	defer ServerConn.Close()
+	appName := "goChat"
+	portLen := 5
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, len(appName)+portLen)
 
 	for {
-		n, addr, err := ServerConn.ReadFromUDP(buf)
+		_, addr, err := ServerConn.ReadFromUDP(buf)
+
 		if addr.IP.String()+":"+strconv.Itoa(addr.Port) == LocalAddr.String() {
 			continue
 		}
-		if string(buf[0:n]) != "goChat" {
+		fmt.Println(string(buf), buf, len(buf), string(buf[0:len(appName)-1]))
+		if string(buf[0:len(appName)]) != appName {
 			continue
 		}
+		recvdPort, err := strconv.Atoi(string(buf[len(appName):]))
+		fmt.Println("Received ", buf)
 
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
 
 		if _, exists := peerConnections[addr.IP.String()]; !exists {
-			newConnection, err := connectToPeer(addr)
+			newConnection, err := connectToPeer(addr.IP, recvdPort)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
@@ -66,8 +72,9 @@ func addPeerConnection(peerConnections map[string]*net.TCPConn, conn *net.TCPCon
 	conn.SetKeepAlivePeriod(15 * time.Second)
 }
 
-func connectToPeer(udpAddr *net.UDPAddr) (*net.TCPConn, error) {
-	tcpAddr := net.TCPAddr{IP: udpAddr.IP, Port: udpAddr.Port}
+func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
+	fmt.Println("Connecting to ", ip, port)
+	tcpAddr := net.TCPAddr{IP: ip, Port: port}
 	chatConn, err := net.DialTCP("tcp", nil, &tcpAddr)
 	return chatConn, err
 }
@@ -83,8 +90,6 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]*net.TCP
 	if err != nil {
 		panic(err)
 	}
-	// go waitForTCP(LocalAddr, peerConnections)
-
 	i := 0
 	go func() {
 		defer Conn.Close()
