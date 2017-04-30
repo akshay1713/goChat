@@ -14,8 +14,16 @@ func main() {
 		fmt.Println("Err while resolving IP address", err)
 	}
 	peerConnections := make(map[string]*net.TCPConn)
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		fmt.Println("Err while listening for connectionsl", err)
+		return
+	}
+	fmt.Println(l.Addr().String())
+	go waitForTCP(peerConnections, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
-	LocalAddr := initUDPBroadcast(peerConnections)
+	ListenerAddr := l.Addr()
+	LocalAddr := initUDPBroadcast(ListenerAddr, peerConnections)
 
 	if err != nil {
 		fmt.Println("Err while listening to the address", err)
@@ -64,8 +72,8 @@ func connectToPeer(udpAddr *net.UDPAddr) (*net.TCPConn, error) {
 	return chatConn, err
 }
 
-func initUDPBroadcast(peerConnections map[string]*net.TCPConn) net.Addr {
-	ServerAddr, err := net.ResolveUDPAddr("udp", "192.168.1.255:7041")
+func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]*net.TCPConn) net.Addr {
+	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:7041")
 	if err != nil {
 		panic(err)
 	}
@@ -75,13 +83,20 @@ func initUDPBroadcast(peerConnections map[string]*net.TCPConn) net.Addr {
 	if err != nil {
 		panic(err)
 	}
-	go waitForTCP(LocalAddr, peerConnections)
+	// go waitForTCP(LocalAddr, peerConnections)
 
 	i := 0
 	go func() {
 		defer Conn.Close()
+		var msg []byte
+		appName := "goChat"
+		msg = append(msg, appName...)
+		port := strconv.Itoa(ListenerAddr.(*net.TCPAddr).Port)
+
+		port = padLeft(port, "0", 5)
+		msg = append(msg, port...)
+		fmt.Println("Port found is ", port)
 		for {
-			msg := "goChat"
 			i++
 			buf := []byte(msg)
 			_, err := Conn.Write(buf)
@@ -94,19 +109,18 @@ func initUDPBroadcast(peerConnections map[string]*net.TCPConn) net.Addr {
 	return LocalAddr
 }
 
-func waitForTCP(LocalAddr net.Addr, peerConnections map[string]*net.TCPConn) {
-	ip, _, _ := net.ParseCIDR(strings.Split(LocalAddr.String(), ":")[0])
-	port, _ := strconv.Atoi(strings.Split(LocalAddr.String(), ":")[1])
-	l, err := net.ListenTCP("tcp", &net.TCPAddr{
-		IP:   ip,
-		Port: port,
-	})
-	if err != nil {
-		fmt.Println("Err while listening for connectionsl", err)
-		return
-	}
+func waitForTCP(peerConnections map[string]*net.TCPConn, listener net.Listener) {
+	// ip, _, _ := net.ParseCIDR(strings.Split(LocalAddr.String(), ":")[0])
+	// port, _ := strconv.Atoi(strings.Split(LocalAddr.String(), ":")[1])
+	fmt.Println("LISTEN TO ME!")
+	defer listener.Close()
+	fmt.Println("Listening on", listener.Addr().String)
 	for {
-		conn, err := l.AcceptTCP()
+		genericConn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error while listening in waitforTCP", err)
+		}
+		conn := genericConn.(*net.TCPConn)
 		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
 		if _, exists := peerConnections[peerIP]; !exists {
 			if err != nil {
