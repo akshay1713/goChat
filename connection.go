@@ -45,21 +45,16 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 
 func addPeerConnection(peerConnections map[string]Peer, conn *net.TCPConn) {
 	peerAddress := conn.RemoteAddr().String()
-	splitAddress := strings.Split(peerAddress, ":")
-	peerIP := splitAddress[0]
-	peerPort, _ := strconv.Atoi(splitAddress[1])
-	newPeer := Peer{Conn: conn, IP: net.ParseIP(peerIP), Port: peerPort}
-	peerConnections[peerIP] = newPeer
+	peerIP := strings.Split(peerAddress, ":")[0]
+	peerConnections[peerIP] = Peer{Conn: conn}
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(15 * time.Second)
-	newPeer.listenForMessage()
 }
 
-func connectToPeer(ip net.IP, port int, localPort int) (*net.TCPConn, error) {
+func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
 	fmt.Println("Connecting to ", ip, port)
 	tcpAddr := net.TCPAddr{IP: ip, Port: port}
-	localAddress := net.TCPAddr{Port: localPort}
-	chatConn, err := net.DialTCP("tcp", &localAddress, &tcpAddr)
+	chatConn, err := net.DialTCP("tcp", nil, &tcpAddr)
 	return chatConn, err
 }
 

@@ -20,7 +20,6 @@ func main() {
 	go waitForTCP(peerConnections, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
-	localPort := ListenerAddr.(*net.TCPAddr).Port
 	LocalAddr := initUDPBroadcast(ListenerAddr, peerConnections)
 
 	if err != nil {
@@ -48,7 +47,7 @@ func main() {
 		}
 
 		if _, exists := peerConnections[addr.IP.String()]; !exists {
-			newConnection, err := connectToPeer(addr.IP, recvdPort, localPort)
+			newConnection, err := connectToPeer(addr.IP, recvdPort)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
