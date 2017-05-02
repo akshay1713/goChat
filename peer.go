@@ -22,15 +22,12 @@ func (peer *Peer) setPing() {
 func (peer *Peer) sendPing() {
 	fmt.Println("Sending Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
-	pingMessage := "ping"
-	fmt.Println(len(pingMessage))
-	peer.Conn.Write([]byte{0, 0, 0, byte(len(pingMessage))})
-	peer.Conn.Write([]byte(pingMessage))
+	pingMessage := getPingMsg()
+	peer.Conn.Write(pingMessage)
 }
 
 func (peer *Peer) listenForMessages() {
 	for {
-		fmt.Println("Listening for messages")
 		msgLength := 4
 		lengthMsg := make([]byte, msgLength)
 		_, err := io.ReadFull(peer.Conn, lengthMsg)
