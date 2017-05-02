@@ -48,12 +48,13 @@ func main() {
 
 		if _, exists := peerConnections[addr.IP.String()]; !exists {
 			newConnection, err := connectToPeer(addr.IP, recvdPort)
-			fmt.Println(peerConnections)
+			fmt.Println(len(peerConnections))
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
 			}
-			addPeerConnection(peerConnections, newConnection)
+			newPeer := addPeerConnection(peerConnections, newConnection)
+			go newPeer.setPing()
 			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
 		}
 	}
