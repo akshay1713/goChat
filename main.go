@@ -17,7 +17,10 @@ func main() {
 		fmt.Println("Err while listening for connectionsl", err)
 		return
 	}
-	go waitForTCP(peerConnections, l)
+	closeChan := make(chan Peer)
+	peerManager := PeerManager{closeChan: closeChan, connectedPeers: peerConnections}
+	go peerManager.init()
+	go waitForTCP(peerManager, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
 	LocalAddr := initUDPBroadcast(ListenerAddr, peerConnections)
@@ -46,14 +49,14 @@ func main() {
 			fmt.Println("Error: ", err)
 		}
 
-		if _, exists := peerConnections[addr.IP.String()]; !exists {
+		if !peerManager.isConnected(addr.IP.String()){
 			newConnection, err := connectToPeer(addr.IP, recvdPort)
 			fmt.Println(len(peerConnections))
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
 			}
-			newPeer := addPeerConnection(peerConnections, newConnection)
+			newPeer := peerManager.addNewPeer(newConnection)
 			go newPeer.setPing()
 			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
 		}

@@ -61,7 +61,7 @@ func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
 	return chatConn, err
 }
 
-func waitForTCP(peerConnections map[string]Peer, listener net.Listener) {
+func waitForTCP(peerManager PeerManager, listener net.Listener) {
 	defer listener.Close()
 	for {
 		genericConn, err := listener.Accept()
@@ -70,13 +70,13 @@ func waitForTCP(peerConnections map[string]Peer, listener net.Listener) {
 		}
 		conn := genericConn.(*net.TCPConn)
 		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
-		if _, exists := peerConnections[peerIP]; !exists {
+		if !peerManager.isConnected(peerIP){
 			if err != nil {
 				fmt.Println("Error accepting: ", err.Error())
 				continue
 			}
 			fmt.Println("Adding connection ", conn.RemoteAddr().String())
-			newPeer := addPeerConnection(peerConnections, conn)
+			newPeer := peerManager.addNewPeer(conn)
 			newPeer.setPing()
 		}
 	}

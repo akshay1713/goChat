@@ -12,6 +12,7 @@ import (
 //Conn - The TCP connection with that peer
 type Peer struct {
 	Conn *net.TCPConn
+	closeChan chan Peer
 }
 
 func (peer *Peer) setPing() {
@@ -31,11 +32,19 @@ func (peer *Peer) listenForMessages() {
 		msgLength := 4
 		lengthMsg := make([]byte, msgLength)
 		_, err := io.ReadFull(peer.Conn, lengthMsg)
-		handleErr(err, "Error while listening")
+		if err != nil {
+			peer.disConnect()
+		}
 		payloadLength := binary.BigEndian.Uint32(lengthMsg)
 		msg := make([]byte, payloadLength)
 		_, err = io.ReadFull(peer.Conn, msg)
-		fmt.Println("Msg received from peer is ", msg)
+		msgType := getMsgType(msg)
+		fmt.Println("Msg type is ", msgType)
 
 	}
+}
+
+func (peer *Peer) disConnect() {
+	peer.Conn.Close()
+	peer.closeChan <- *peer
 }
