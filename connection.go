@@ -30,7 +30,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 		port = padLeft(port, "0", 5)
 		msg = append(msg, port...)
 		fmt.Println("Port found is ", port)
-		for {
+		for i < 10 {
 			i++
 			buf := []byte(msg)
 			_, err := Conn.Write(buf)
@@ -41,17 +41,6 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 		}
 	}()
 	return LocalAddr
-}
-
-func addPeerConnection(peerConnections map[string]Peer, conn *net.TCPConn) Peer{
-	peerAddress := conn.RemoteAddr().String()
-	peerIP := strings.Split(peerAddress, ":")[0]
-	newPeer := Peer{Conn: conn}
-	peerConnections[peerIP] = newPeer
-	conn.SetKeepAlive(true)
-	conn.SetKeepAlivePeriod(15 * time.Second)
-	go newPeer.listenForMessages()
-	return newPeer
 }
 
 func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
@@ -76,8 +65,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				continue
 			}
 			fmt.Println("Adding connection ", conn.RemoteAddr().String())
-			newPeer := peerManager.addNewPeer(conn)
-			newPeer.setPing()
+			_ = peerManager.addNewPeer(conn)
+			//newPeer.setPing()
 		}
 	}
 }

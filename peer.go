@@ -15,19 +15,19 @@ type Peer struct {
 	closeChan chan Peer
 }
 
-func (peer *Peer) setPing() {
+func (peer Peer) setPing() {
 	fmt.Println("Setting Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
 }
 
-func (peer *Peer) sendPing() {
+func (peer Peer) sendPing() {
 	fmt.Println("Sending Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
 }
 
-func (peer *Peer) listenForMessages() {
+func (peer Peer) listenForMessages() {
 	for {
 		msgLength := 4
 		lengthMsg := make([]byte, msgLength)
@@ -39,12 +39,20 @@ func (peer *Peer) listenForMessages() {
 		msg := make([]byte, payloadLength)
 		_, err = io.ReadFull(peer.Conn, msg)
 		msgType := getMsgType(msg)
+		switch msgType {
+		case "ping":
+			peer.pingHandler()
+		}
 		fmt.Println("Msg type is ", msgType)
 
 	}
 }
 
-func (peer *Peer) disConnect() {
+func (peer Peer) pingHandler() {
+	fmt.Println("Ping received")
+}
+
+func (peer Peer) disConnect() {
 	peer.Conn.Close()
 	peer.closeChan <- *peer
 }
