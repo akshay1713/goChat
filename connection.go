@@ -65,8 +65,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				continue
 			}
 			fmt.Println("Adding connection ", conn.RemoteAddr().String())
-			_ = peerManager.addNewPeer(conn)
-			//newPeer.setPing()
+			newPeer := peerManager.addNewPeer(conn)
+			newPeer.setPing()
 		}
 	}
 }

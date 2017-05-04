@@ -7,6 +7,13 @@ func getPingMsg() []byte{
 	return pingMsg
 }
 
+func getPongMsg() []byte{
+	pingMsg := make([]byte, 5)
+	copy(pingMsg[0:4], []byte{0,0,0,1})
+	copy(pingMsg[4:5], []byte{1})
+	return pingMsg
+}
+
 func getMsgType(msg []byte) string{
 	availableMsgTypes :=  map[byte]string{
 		0: "ping",

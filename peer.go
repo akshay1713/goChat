@@ -17,27 +17,25 @@ type Peer struct {
 
 func (peer Peer) setPing() {
 	fmt.Println("Setting Ping")
+	// Do NOT forget to increase this time later
 	time.AfterFunc(2*time.Second, peer.sendPing)
 }
 
 func (peer Peer) sendPing() {
-	fmt.Println("Sending Ping")
+	//fmt.Println("Sending Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
+	msg := peer.getNextMessage()
+	if getMsgType(msg) != "pong" {
+		fmt.Print("Response to ping not received")
+		peer.disConnect()
+	}
 }
 
 func (peer Peer) listenForMessages() {
 	for {
-		msgLength := 4
-		lengthMsg := make([]byte, msgLength)
-		_, err := io.ReadFull(peer.Conn, lengthMsg)
-		if err != nil {
-			peer.disConnect()
-		}
-		payloadLength := binary.BigEndian.Uint32(lengthMsg)
-		msg := make([]byte, payloadLength)
-		_, err = io.ReadFull(peer.Conn, msg)
+		msg := peer.getNextMessage()
 		msgType := getMsgType(msg)
 		switch msgType {
 		case "ping":
@@ -48,11 +46,29 @@ func (peer Peer) listenForMessages() {
 	}
 }
 
+func (peer Peer) getNextMessage() []byte{
+	msgLength := 4
+	lengthMsg := make([]byte, msgLength)
+	_, err := io.ReadFull(peer.Conn, lengthMsg)
+	if err != nil {
+		peer.disConnect()
+	}
+	payloadLength := binary.BigEndian.Uint32(lengthMsg)
+	msg := make([]byte, payloadLength)
+	_, err = io.ReadFull(peer.Conn, msg)
+	return msg
+}
+
 func (peer Peer) pingHandler() {
-	fmt.Println("Ping received")
+	peer.sendPong()
+}
+
+func (peer Peer) sendPong() {
+	pongMessage := getPongMsg()
+	peer.Conn.Write(pongMessage)
 }
 
 func (peer Peer) disConnect() {
 	peer.Conn.Close()
-	peer.closeChan <- *peer
+	peer.closeChan <- peer
 }
