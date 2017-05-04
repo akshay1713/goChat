@@ -26,7 +26,8 @@ func (peer Peer) sendPing() {
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
-	msg := peer.getNextMessage()
+	msg, err := peer.getNextMessage()
+	handleErr(err, "Error while sending ping: ")
 	if getMsgType(msg) != "pong" {
 		fmt.Print("Response to ping not received")
 		peer.disConnect()
@@ -35,7 +36,8 @@ func (peer Peer) sendPing() {
 
 func (peer Peer) listenForMessages() {
 	for {
-		msg := peer.getNextMessage()
+		msg, err := peer.getNextMessage()
+		handleErr(err, "Error while getting message from peer ")
 		msgType := getMsgType(msg)
 		switch msgType {
 		case "ping":
@@ -46,17 +48,14 @@ func (peer Peer) listenForMessages() {
 	}
 }
 
-func (peer Peer) getNextMessage() []byte{
+func (peer Peer) getNextMessage() ([]byte, error){
 	msgLength := 4
 	lengthMsg := make([]byte, msgLength)
 	_, err := io.ReadFull(peer.Conn, lengthMsg)
-	if err != nil {
-		peer.disConnect()
-	}
 	payloadLength := binary.BigEndian.Uint32(lengthMsg)
 	msg := make([]byte, payloadLength)
 	_, err = io.ReadFull(peer.Conn, msg)
-	return msg
+	return msg, err
 }
 
 func (peer Peer) pingHandler() {
