@@ -60,7 +60,7 @@ func (peer Peer) sendMessage(msgContent string) error {
 	return err
 }
 
-func (peer Peer) chatHandler(msgContent []byte){
+func (peer Peer) chatHandler(msgContent []byte) {
 	fmt.Println("Msg from peer: ", string(msgContent))
 }
 
