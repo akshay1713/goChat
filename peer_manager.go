@@ -11,7 +11,7 @@ type PeerManager struct{
 	connectedPeers map[string]Peer
 }
 
-func (peerManager *PeerManager) addNewPeer(conn *net.TCPConn) Peer{
+func (peerManager PeerManager) addNewPeer(conn *net.TCPConn) Peer{
 	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan}
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
@@ -20,16 +20,25 @@ func (peerManager *PeerManager) addNewPeer(conn *net.TCPConn) Peer{
 	return newPeer
 }
 
-func (peerManager *PeerManager) init() {
+func (peerManager PeerManager) init() {
 	for {
 		disconnectedPeer := <- peerManager.closeChan
 		fmt.Println("Peer disconnected", disconnectedPeer)
 	}
 }
 
-func (peerManager *PeerManager) isConnected(IP string) bool{
+func (peerManager PeerManager) isConnected(IP string) bool{
 	if _, exists := peerManager.connectedPeers[IP]; exists {
 		return true
 	}
 	return false
+}
+
+func (peerManager PeerManager) sendMessage(message string) {
+	for _, peer := range peerManager.connectedPeers {
+		err := peer.sendMessage(message)
+		if err != nil {
+			peer.disConnect()
+		}
+	}
 }
