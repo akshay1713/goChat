@@ -44,7 +44,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager){
+func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
@@ -64,7 +64,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 			fmt.Println("Error: ", err)
 		}
 
-		if !peerManager.isConnected(addr.IP.String()){
+		if !peerManager.isConnected(addr.IP.String()) {
 			newConnection, err := connectToPeer(addr.IP, recvdPort)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
@@ -93,7 +93,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		}
 		conn := genericConn.(*net.TCPConn)
 		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
-		if !peerManager.isConnected(peerIP){
+		if !peerManager.isConnected(peerIP) {
 			if err != nil {
 				fmt.Println("Error accepting: ", err.Error())
 				continue

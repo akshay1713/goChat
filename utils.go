@@ -15,8 +15,8 @@ func padLeft(str, pad string, length int) string {
 }
 
 func handleErr(err error, prefix string) {
-	if err != nil{
-		fmt.Println(prefix,": ", err)
+	if err != nil {
+		fmt.Println(prefix, ": ", err)
 	}
 }
 
@@ -26,4 +26,3 @@ func getBytesFromUint32(source []byte, num uint32) {
 	source[2] = byte(num >> 8)
 	source[3] = byte(num)
 }
-
