@@ -36,8 +36,10 @@ func (peer Peer) listenForMessages() {
 		switch msgType {
 		case "ping":
 			peer.pingHandler()
+		case "chat":
+			msgContent := extractChatMsg(msg)
+			peer.chatHandler(msgContent)
 		}
-		fmt.Println("Msg type is ", msgType)
 
 	}
 }
@@ -50,6 +52,16 @@ func (peer Peer) getNextMessage() ([]byte, error) {
 	msg := make([]byte, payloadLength)
 	_, err = io.ReadFull(peer.Conn, msg)
 	return msg, err
+}
+
+func (peer Peer) sendMessage(msgContent string) error {
+	chatMsg := getChatMsg(msgContent)
+	_, err := peer.Conn.Write(chatMsg)
+	return err
+}
+
+func (peer Peer) chatHandler(msgContent []byte){
+	fmt.Println("Msg from peer: ", string(msgContent))
 }
 
 func (peer Peer) pingHandler() {
