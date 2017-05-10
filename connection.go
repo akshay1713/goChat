@@ -129,17 +129,10 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 			_, err = io.ReadFull(conn, peerInfo)
 			handleErr(err, "Error while reading message ")
 			fmt.Println(binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]}))
-			for k := 0; k < len(peerInfo); k += 6 {
-				fmt.Println()
+			for k := 2; k < len(peerInfo); k += 6 {
+				fmt.Println(binary.BigEndian.Uint16([]byte{peerInfo[k], peerInfo[k+1]}))
+				fmt.Println(net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5]))
 			}
-
-			//if err != nil {
-			//	fmt.Println("Error accepting: ", err.Error())
-			//	continue
-			//}
-			//fmt.Println("Adding connection ", conn.RemoteAddr().String())
-			//newPeer := peerManager.addNewPeer(conn)
-			//newPeer.setPing()
 		}
 	}
 }
