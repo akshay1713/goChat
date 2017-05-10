@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
+	"strconv"
 )
 
 func main() {
@@ -22,11 +24,14 @@ func main() {
 	go waitForTCP(peerManager, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
+	fmt.Println(ListenerAddr)
 	LocalAddr := initUDPBroadcast(ListenerAddr, peerConnections)
 
 	if err != nil {
 		fmt.Println("Err while listening to the address", err)
 	}
-	go listenForUDPBroadcast(ServerConn, LocalAddr, peerManager)
+	tcpListenerAddr := strings.Split(l.Addr().String(), ":")
+	port, _ := strconv.Atoi(tcpListenerAddr[len(tcpListenerAddr) - 1])
+	go listenForUDPBroadcast(ServerConn, LocalAddr, peerManager, port)
 	startCli(peerManager)
 }

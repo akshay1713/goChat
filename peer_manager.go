@@ -42,3 +42,11 @@ func (peerManager PeerManager) sendMessage(message string) {
 		}
 	}
 }
+
+func (peerManager PeerManager) getAllIPs() []string{
+	var peerIPs []string
+	for _, peer := range peerManager.connectedPeers {
+		peerIPs = append(peerIPs, peer.getIP())
+	}
+	return peerIPs
+}

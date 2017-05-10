@@ -1,7 +1,11 @@
 package main
 
 import (
+	//"bytes"
+	"encoding/binary"
 	"fmt"
+	//"io"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -43,11 +47,16 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager) {
+func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
 	buf := make([]byte, len(appName)+portLen)
+	portBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(portBytes, uint16(port))
+	fmt.Println(portBytes)
+	var all_ips []byte
+	fmt.Println("Only port ", all_ips, portBytes)
 	for {
 		_, addr, err := ServerConn.ReadFromUDP(buf)
 
@@ -62,15 +71,35 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
-
 		if !peerManager.isConnected(addr.IP.String()) {
+			peerIPs := peerManager.getAllIPs()
+			all_ips = []byte{}
+			totalLen := 2 + len(peerIPs)*6
+			msgLengthBytes := make([]byte, 4)
+			binary.BigEndian.PutUint32(msgLengthBytes, uint32(totalLen))
+			all_ips = append(all_ips, msgLengthBytes...)
+			all_ips = append(all_ips, portBytes...)
+			fmt.Println(peerIPs)
+			for i := range peerIPs {
+				splitAddress := strings.Split(peerIPs[i], ":")
+				peer_portBytes := make([]byte, 2)
+				peer_port, _ := strconv.Atoi(splitAddress[1])
+				binary.BigEndian.PutUint16(peer_portBytes, uint16(peer_port))
+				splitIP := strings.Split(splitAddress[0], ".")
+				for j := 0; j < 4; j++ {
+					partIP, _ := strconv.Atoi(splitIP[j])
+					all_ips = append(all_ips, byte(partIP))
+				}
+				all_ips = append(all_ips, peer_portBytes...)
+			}
 			newConnection, err := connectToPeer(addr.IP, recvdPort)
 			if err != nil {
 				fmt.Println("Err while connecting to the source of broadcase message", err)
 				continue
 			}
-			newPeer := peerManager.addNewPeer(newConnection)
-			go newPeer.setPing()
+			newConnection.Write(all_ips)
+			//newPeer := peerManager.addNewPeer(newConnection)
+			//go newPeer.setPing()
 			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
 		}
 	}
@@ -93,13 +122,24 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		conn := genericConn.(*net.TCPConn)
 		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
 		if !peerManager.isConnected(peerIP) {
-			if err != nil {
-				fmt.Println("Error accepting: ", err.Error())
-				continue
+			msgLength := make([]byte, 4)
+			_, err := io.ReadFull(conn, msgLength)
+			handleErr(err, "Error while reading message ")
+			peerInfo := make([]byte, 4)
+			_, err = io.ReadFull(conn, peerInfo)
+			handleErr(err, "Error while reading message ")
+			fmt.Println(binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]}))
+			for k := 0; k < len(peerInfo); k += 6 {
+				fmt.Println()
 			}
-			fmt.Println("Adding connection ", conn.RemoteAddr().String())
-			newPeer := peerManager.addNewPeer(conn)
-			newPeer.setPing()
+
+			//if err != nil {
+			//	fmt.Println("Error accepting: ", err.Error())
+			//	continue
+			//}
+			//fmt.Println("Adding connection ", conn.RemoteAddr().String())
+			//newPeer := peerManager.addNewPeer(conn)
+			//newPeer.setPing()
 		}
 	}
 }

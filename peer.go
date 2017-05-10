@@ -50,6 +50,10 @@ func (peer Peer) listenForMessages() {
 	}
 }
 
+func (peer Peer) getIP() string {
+	return peer.Conn.RemoteAddr().String()
+}
+
 func (peer Peer) getNextMessage() ([]byte, error) {
 	msgLength := 4
 	lengthMsg := make([]byte, msgLength)
