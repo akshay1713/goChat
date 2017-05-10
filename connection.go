@@ -41,7 +41,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 			if err != nil {
 				fmt.Println(err)
 			}
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Second * 3)
 		}
 	}()
 	return LocalAddr
@@ -57,6 +57,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 	fmt.Println(portBytes)
 	var all_ips []byte
 	fmt.Println("Only port ", all_ips, portBytes)
+	broadcastRecvdIPs := make(map[string]bool)
 	for {
 		_, addr, err := ServerConn.ReadFromUDP(buf)
 
@@ -71,12 +72,14 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
-		if !peerManager.isConnected(addr.IP.String()) {
+		if _, exists := broadcastRecvdIPs[addr.IP.String()]; !exists {
+			broadcastRecvdIPs[addr.IP.String()] = true
 			peerIPs := peerManager.getAllIPs()
 			all_ips = []byte{}
 			totalLen := 2 + len(peerIPs)*6
 			msgLengthBytes := make([]byte, 4)
 			binary.BigEndian.PutUint32(msgLengthBytes, uint32(totalLen))
+			all_ips = append(all_ips, 0)
 			all_ips = append(all_ips, msgLengthBytes...)
 			all_ips = append(all_ips, portBytes...)
 			fmt.Println(peerIPs)
@@ -120,18 +123,37 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 			fmt.Println("Error while listening in waitforTCP", err)
 		}
 		conn := genericConn.(*net.TCPConn)
-		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
-		if !peerManager.isConnected(peerIP) {
-			msgLength := make([]byte, 4)
-			_, err := io.ReadFull(conn, msgLength)
-			handleErr(err, "Error while reading message ")
-			peerInfo := make([]byte, 4)
-			_, err = io.ReadFull(conn, peerInfo)
-			handleErr(err, "Error while reading message ")
-			fmt.Println(binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]}))
-			for k := 2; k < len(peerInfo); k += 6 {
-				fmt.Println(binary.BigEndian.Uint16([]byte{peerInfo[k], peerInfo[k+1]}))
-				fmt.Println(net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5]))
+		senderIPString := strings.Split(conn.RemoteAddr().String(), ":")[0]
+		senderIP, _, _ := net.ParseCIDR(senderIPString)
+		fmt.Println("Recieved new connection", senderIPString)
+		if !peerManager.isConnected(senderIPString) {
+			msgType := make([]byte, 1)
+			_, err := io.ReadFull(conn, msgType)
+			if msgType[0] == 0 {
+				//This msg is a list of IPs & ports
+				msgLength := make([]byte, 4)
+				_, err = io.ReadFull(conn, msgLength)
+				handleErr(err, "Error while reading message ")
+				peerInfoLength := binary.BigEndian.Uint32(msgLength)
+				fmt.Println("Msg length ", msgLength, peerInfoLength)
+				peerInfo := make([]byte, peerInfoLength)
+				_, err = io.ReadFull(conn, peerInfo)
+				handleErr(err, "Error while reading message ")
+				senderPort := binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]})
+				newConn, err := connectToPeer(senderIP, int(senderPort))
+				newPeer := peerManager.addNewPeer(newConn)
+				newPeer.setPing()
+				handleErr(err, "Error while connecting to sender")
+				for k := 2; k < len(peerInfo); k += 6 {
+					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
+					peerPort := binary.BigEndian.Uint16([]byte{peerInfo[k], peerInfo[k+1]})
+					newConn, err = connectToPeer(peerIP, int(peerPort))
+					newPeer = peerManager.addNewPeer(newConn)
+				}
+			} else {
+				//This msg is a connection request
+				peerManager.addNewPeer(conn)
+
 			}
 		}
 	}
