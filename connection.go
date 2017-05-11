@@ -103,6 +103,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 			newConnection.Write(all_ips)
 			//newPeer := peerManager.addNewPeer(newConnection)
 			//go newPeer.setPing()
+			newConnection.Close()
 			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
 		}
 	}
@@ -124,8 +125,16 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		}
 		conn := genericConn.(*net.TCPConn)
 		senderIPString := strings.Split(conn.RemoteAddr().String(), ":")[0]
-		senderIP, _, _ := net.ParseCIDR(senderIPString)
-		fmt.Println("Recieved new connection", senderIPString)
+		senderIPOctets := strings.Split(senderIPString, ".")
+		fmt.Println(senderIPString)
+		handleErr(err, "Parsing IP")
+		senderIP := make([]byte, 4)
+		for i:= 0; i < len(senderIPOctets); i++ {
+			octetInt, _ := strconv.Atoi(senderIPOctets[i])
+			senderIP = append(senderIP, byte(octetInt))
+		}
+		fmt.Println("Sender IP is ", senderIP)
+		fmt.Println("Recieved new connection", senderIPString, senderIP)
 		if !peerManager.isConnected(senderIPString) {
 			msgType := make([]byte, 1)
 			_, err := io.ReadFull(conn, msgType)
@@ -140,7 +149,10 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				_, err = io.ReadFull(conn, peerInfo)
 				handleErr(err, "Error while reading message ")
 				senderPort := binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]})
+				fmt.Println("Connecting to ", senderIPString, senderPort)
+				//splitIP := strings.Split(senderIPString, ".")
 				newConn, err := connectToPeer(senderIP, int(senderPort))
+				handleErr(err, "Error while connecting to sender")
 				newPeer := peerManager.addNewPeer(newConn)
 				newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
