@@ -128,8 +128,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		senderIPOctets := strings.Split(senderIPString, ".")
 		fmt.Println(senderIPString)
 		handleErr(err, "Parsing IP")
-		senderIP := make([]byte, 4)
-		for i:= 0; i < len(senderIPOctets); i++ {
+		var senderIP []byte
+		for i := 0; i < len(senderIPOctets); i++ {
 			octetInt, _ := strconv.Atoi(senderIPOctets[i])
 			senderIP = append(senderIP, byte(octetInt))
 		}

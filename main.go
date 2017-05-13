@@ -12,6 +12,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Err while resolving IP address", err)
 	}
+	//is_broadcasting := false
 	peerConnections := make(map[string]Peer)
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
