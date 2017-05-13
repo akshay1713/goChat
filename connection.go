@@ -47,7 +47,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager *PeerManager, port int) {
+func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
@@ -56,6 +56,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 	binary.BigEndian.PutUint16(portBytes, uint16(port))
 	fmt.Println(portBytes)
 	var all_ips []byte
+	fmt.Println("Only port ", all_ips, portBytes)
 	broadcastRecvdIPs := make(map[string]bool)
 	for {
 		_, addr, err := ServerConn.ReadFromUDP(buf)
@@ -71,8 +72,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
-		if _, exists := broadcastRecvdIPs[addr.IP.String()]; !exists && !peerManager.isConnected(addr.IP.String()) {
-			peerManager.addExpectingConnection(addr.IP)
+		if _, exists := broadcastRecvdIPs[addr.IP.String()]; !exists {
 			broadcastRecvdIPs[addr.IP.String()] = true
 			peerIPs := peerManager.getAllIPs()
 			all_ips = []byte{}
@@ -104,17 +104,19 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 			//newPeer := peerManager.addNewPeer(newConnection)
 			//go newPeer.setPing()
 			newConnection.Close()
+			fmt.Println("New peer joined", newConnection.RemoteAddr().String())
 		}
 	}
 }
 
 func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
+	fmt.Println("Connecting to ", ip, port)
 	tcpAddr := net.TCPAddr{IP: ip, Port: port}
 	chatConn, err := net.DialTCP("tcp", nil, &tcpAddr)
 	return chatConn, err
 }
 
-func waitForTCP(peerManager *PeerManager, listener net.Listener) {
+func waitForTCP(peerManager PeerManager, listener net.Listener) {
 	defer listener.Close()
 	for {
 		genericConn, err := listener.Accept()
@@ -126,8 +128,8 @@ func waitForTCP(peerManager *PeerManager, listener net.Listener) {
 		senderIPOctets := strings.Split(senderIPString, ".")
 		fmt.Println(senderIPString)
 		handleErr(err, "Parsing IP")
-		var senderIP []byte
-		for i := 0; i < len(senderIPOctets); i++ {
+		senderIP := make([]byte, 4)
+		for i:= 0; i < len(senderIPOctets); i++ {
 			octetInt, _ := strconv.Atoi(senderIPOctets[i])
 			senderIP = append(senderIP, byte(octetInt))
 		}
@@ -136,7 +138,7 @@ func waitForTCP(peerManager *PeerManager, listener net.Listener) {
 		if !peerManager.isConnected(senderIPString) {
 			msgType := make([]byte, 1)
 			_, err := io.ReadFull(conn, msgType)
-			if msgType[0] == 0 && !peerManager.isExpectingFrom(senderIPString) {
+			if msgType[0] == 0 {
 				//This msg is a list of IPs & ports
 				msgLength := make([]byte, 4)
 				_, err = io.ReadFull(conn, msgLength)
@@ -160,9 +162,8 @@ func waitForTCP(peerManager *PeerManager, listener net.Listener) {
 					newConn, err = connectToPeer(peerIP, int(peerPort))
 					newPeer = peerManager.addNewPeer(newConn)
 				}
-			} else if msgType[0] == 1 {
+			} else {
 				//This msg is a connection request
-				fmt.Println("Adding peer who requested")
 				peerManager.addNewPeer(conn)
 
 			}

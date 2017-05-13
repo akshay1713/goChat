@@ -35,20 +35,10 @@ func (peer Peer) sendPing() {
 }
 
 func (peer Peer) listenForMessages() {
-	fmt.Println("Listening for messages from ", peer)
 	for {
 		msg, err := peer.getNextMessage()
-		if msg == nil || len(msg) == 0 {
-			fmt.Println("Nil/empty msg received ", msg)
-			peer.disConnect()
-			return
-		} else if err != nil {
-			fmt.Println("Err while getting next message from peer ", err)
-			peer.disConnect()
-			return
-		}
+		handleErr(err, "Error while getting message from peer ")
 		msgType := getMsgType(msg)
-		fmt.Println("Msg received is ", msg)
 		switch msgType {
 		case "ping":
 			peer.pingHandler()
