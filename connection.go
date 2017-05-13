@@ -153,6 +153,10 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				//splitIP := strings.Split(senderIPString, ".")
 				newConn, err := connectToPeer(senderIP, int(senderPort))
 				handleErr(err, "Error while connecting to sender")
+				if newConn == nil {
+					fmt.Println("Nil conn")
+					continue
+				}
 				newPeer := peerManager.addNewPeer(newConn)
 				newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
