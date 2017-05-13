@@ -47,7 +47,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int) {
+func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager *PeerManager, port int) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
@@ -116,7 +116,7 @@ func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
 	return chatConn, err
 }
 
-func waitForTCP(peerManager PeerManager, listener net.Listener) {
+func waitForTCP(peerManager *PeerManager, listener net.Listener) {
 	defer listener.Close()
 	for {
 		genericConn, err := listener.Accept()
@@ -135,9 +135,9 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		}
 		fmt.Println("Sender IP is ", senderIP)
 		fmt.Println("Recieved new connection", senderIPString, senderIP)
+		msgType := make([]byte, 1)
+		_, err = io.ReadFull(conn, msgType)
 		if !peerManager.isConnected(senderIPString) {
-			msgType := make([]byte, 1)
-			_, err := io.ReadFull(conn, msgType)
 			if msgType[0] == 0 {
 				//This msg is a list of IPs & ports
 				msgLength := make([]byte, 4)
@@ -157,19 +157,39 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					fmt.Println("Nil conn")
 					continue
 				}
-				newPeer := peerManager.addNewPeer(newConn)
+				currentTimestamp := uint32(time.Now().UTC().Unix())
+				newPeer := peerManager.addNewPeer(newConn, currentTimestamp)
 				newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
 					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
 					peerPort := binary.BigEndian.Uint16([]byte{peerInfo[k], peerInfo[k+1]})
 					newConn, err = connectToPeer(peerIP, int(peerPort))
-					newPeer = peerManager.addNewPeer(newConn)
+					if !peerManager.isConnected(peerIP.String()){
+						currentTimestamp := uint32(time.Now().UTC().Unix())
+						newPeer = peerManager.addNewPeer(newConn, currentTimestamp)
+					}
 				}
 			} else {
 				//This msg is a connection request
-				peerManager.addNewPeer(conn)
+				msgLength := 4
+				lengthMsg := make([]byte, msgLength)
+				_, err = io.ReadFull(conn, lengthMsg)
+				payloadLength := binary.BigEndian.Uint32(lengthMsg)
+				msg := make([]byte, payloadLength)
+				_, err = io.ReadFull(conn, msg)
+				currentTimestamp := uint32(time.Now().UTC().Unix())
+				peerManager.addNewPeer(conn, currentTimestamp)
 
+			}
+		} else {
+			msgLength := 4
+			recvdTimestampBytes := make([]byte, msgLength)
+			_, err = io.ReadFull(conn, recvdTimestampBytes)
+			recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
+			existingPeer := peerManager.getPeer(senderIPString)
+			if recvdTimestamp < existingPeer.connectedAt {
+				fmt.Println("New is old")
 			}
 		}
 	}

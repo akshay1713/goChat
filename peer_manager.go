@@ -4,6 +4,7 @@ import (
 	"net"
 	"strings"
 	"fmt"
+	"encoding/binary"
 )
 
 type PeerManager struct{
@@ -11,11 +12,18 @@ type PeerManager struct{
 	connectedPeers map[string]Peer
 }
 
-func (peerManager PeerManager) addNewPeer(conn *net.TCPConn) Peer{
-	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan}
+func (peerManager *PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32) Peer{
+	newPeer := Peer{
+		Conn: conn,
+		closeChan: peerManager.closeChan,
+		connectedAt: currentTimestamp,
+	}
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
+	timestampBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(timestampBytes, uint32(currentTimestamp))
+	conn.Write(timestampBytes)
 	go newPeer.listenForMessages()
 	return newPeer
 }
@@ -49,4 +57,17 @@ func (peerManager PeerManager) getAllIPs() []string{
 		peerIPs = append(peerIPs, peer.getIP())
 	}
 	return peerIPs
+}
+
+func (peerManager PeerManager) getPeer(IP string) Peer{
+	return peerManager.connectedPeers[IP]
+}
+
+func (peerManager *PeerManager) updatePeer(IP string, conn *net.TCPConn, connectedAt uint32) {
+	peerToUpdate := peerManager.connectedPeers[IP]
+	peerToUpdate.disConnect()
+	peerToUpdate.Conn = conn
+	peerToUpdate.connectedAt = connectedAt
+	fmt.Println("Starting loop again")
+	go peerToUpdate.listenForMessages()
 }

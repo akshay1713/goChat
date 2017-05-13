@@ -22,7 +22,7 @@ func main() {
 	closeChan := make(chan Peer)
 	peerManager := PeerManager{closeChan: closeChan, connectedPeers: peerConnections}
 	go peerManager.init()
-	go waitForTCP(peerManager, l)
+	go waitForTCP(&peerManager, l)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
 	fmt.Println(ListenerAddr)
@@ -33,6 +33,6 @@ func main() {
 	}
 	tcpListenerAddr := strings.Split(l.Addr().String(), ":")
 	port, _ := strconv.Atoi(tcpListenerAddr[len(tcpListenerAddr) - 1])
-	go listenForUDPBroadcast(ServerConn, LocalAddr, peerManager, port)
+	go listenForUDPBroadcast(ServerConn, LocalAddr, &peerManager, port)
 	startCli(peerManager)
 }

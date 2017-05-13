@@ -11,8 +11,9 @@ import (
 //Peer contains the following data associated with a connected peer-
 //Conn - The TCP connection with that peer
 type Peer struct {
-	Conn      *net.TCPConn
-	closeChan chan Peer
+	Conn        *net.TCPConn
+	closeChan   chan Peer
+	connectedAt uint32
 }
 
 func (peer Peer) setPing() {
@@ -37,7 +38,7 @@ func (peer Peer) sendPing() {
 func (peer Peer) listenForMessages() {
 	for {
 		msg, err := peer.getNextMessage()
-		if msg == nil || len(msg) == 0 || err != nil{
+		if msg == nil || len(msg) == 0 || err != nil {
 			fmt.Println("Empty/nil message received", msg, err)
 			peer.disConnect()
 			return
@@ -90,4 +91,9 @@ func (peer Peer) sendPong() {
 func (peer Peer) disConnect() {
 	peer.Conn.Close()
 	peer.closeChan <- peer
+}
+
+func (peer Peer) startHandshake() {
+	current_timestamp := time.Now().UTC()
+	fmt.Println("Timestamp is ", current_timestamp)
 }
