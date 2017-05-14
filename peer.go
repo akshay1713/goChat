@@ -23,19 +23,13 @@ func (peer Peer) setPing() {
 }
 
 func (peer Peer) sendPing() {
-	//fmt.Println("Sending Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
-	//msg, err := peer.getNextMessage()
-	//handleErr(err, "Error while sending ping: ")
-	//if getMsgType(msg) != "pong" {
-	//fmt.Print("Response to ping not received")
-	//peer.disConnect()
-	//}
 }
 
 func (peer Peer) listenForMessages() {
+	fmt.Print("Listening for messages")
 	for {
 		msg, err := peer.getNextMessage()
 		if msg == nil || len(msg) == 0 || err != nil {
@@ -70,6 +64,7 @@ func (peer Peer) getNextMessage() ([]byte, error) {
 }
 
 func (peer Peer) sendMessage(msgContent string) error {
+	fmt.Println("Sending message to one peer")
 	chatMsg := getChatMsg(msgContent)
 	_, err := peer.Conn.Write(chatMsg)
 	return err

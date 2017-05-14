@@ -43,6 +43,7 @@ func (peerManager PeerManager) isConnected(IP string) bool{
 }
 
 func (peerManager PeerManager) sendMessage(message string) {
+	fmt.Print("sending to peers ", message)
 	for _, peer := range peerManager.connectedPeers {
 		err := peer.sendMessage(message)
 		if err != nil {
