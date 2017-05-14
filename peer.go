@@ -45,7 +45,6 @@ func (peer Peer) listenForMessages() {
 			msgContent := extractChatMsg(msg)
 			peer.chatHandler(msgContent)
 		}
-
 	}
 }
 
@@ -86,9 +85,4 @@ func (peer Peer) sendPong() {
 func (peer Peer) disConnect() {
 	peer.Conn.Close()
 	peer.closeChan <- peer
-}
-
-func (peer Peer) startHandshake() {
-	current_timestamp := time.Now().UTC()
-	fmt.Println("Timestamp is ", current_timestamp)
 }
