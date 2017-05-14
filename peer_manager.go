@@ -19,6 +19,10 @@ func (peerManager *PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp u
 		connectedAt: currentTimestamp,
 	}
 	peerAddress := conn.RemoteAddr().String()
+	if existingPeer, exists := peerManager.connectedPeers[peerAddress]; exists {
+		fmt.Println("Exists, disconnecting")
+		existingPeer.disConnect()
+	}
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
 	timestampBytes := make([]byte, 4)

@@ -195,7 +195,7 @@ func waitForTCP(peerManager *PeerManager, listener net.Listener) {
 			if recvdTimestamp < existingPeer.connectedAt {
 				fmt.Println("New is old")
 			}
-			peerManager.updatePeer(senderIPString, conn, recvdTimestamp)
+			peerManager.addNewPeer(conn, recvdTimestamp)
 		}
 	}
 }
