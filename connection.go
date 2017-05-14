@@ -30,7 +30,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 		port = padLeft(port, "0", 5)
 		msg = append(msg, port...)
 		fmt.Println("Port found is ", port)
-		for i < 10 {
+		for i < 5 {
 			i++
 			buf := []byte(msg)
 			_, err := Conn.Write(buf)
@@ -39,6 +39,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 			}
 			time.Sleep(time.Second * 1)
 		}
+		fmt.Println("Finished broadcasting")
 	}()
 	return LocalAddr
 }
