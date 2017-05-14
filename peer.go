@@ -11,7 +11,7 @@ import (
 //Peer contains the following data associated with a connected peer-
 //Conn - The TCP connection with that peer
 type Peer struct {
-	Conn *net.TCPConn
+	Conn      *net.TCPConn
 	closeChan chan Peer
 }
 
@@ -26,12 +26,6 @@ func (peer Peer) sendPing() {
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
-	msg, err := peer.getNextMessage()
-	handleErr(err, "Error while sending ping: ")
-	if getMsgType(msg) != "pong" {
-		fmt.Print("Response to ping not received")
-		peer.disConnect()
-	}
 }
 
 func (peer Peer) listenForMessages() {
@@ -48,7 +42,7 @@ func (peer Peer) listenForMessages() {
 	}
 }
 
-func (peer Peer) getNextMessage() ([]byte, error){
+func (peer Peer) getNextMessage() ([]byte, error) {
 	msgLength := 4
 	lengthMsg := make([]byte, msgLength)
 	_, err := io.ReadFull(peer.Conn, lengthMsg)
@@ -59,7 +53,7 @@ func (peer Peer) getNextMessage() ([]byte, error){
 }
 
 func (peer Peer) pingHandler() {
-	peer.sendPong()
+	fmt.Println("Ping received")
 }
 
 func (peer Peer) sendPong() {
