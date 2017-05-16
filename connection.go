@@ -155,7 +155,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					continue
 				}
 				newPeer := peerManager.addNewPeer(newConn)
-				newPeer.setPing()
+				fmt.Println("Setting ping")
+				go newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
 					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
@@ -166,6 +167,11 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 						newPeer.setPing()
 					}
 				}
+			} else {
+				//This msg is a connection request
+				fmt.Println("Processing connection request")
+				newPeer := peerManager.addNewPeer(conn)
+				go newPeer.setPing()
 			}
 		}
 	}

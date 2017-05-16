@@ -29,6 +29,7 @@ func (peer Peer) sendPing() {
 }
 
 func (peer Peer) listenForMessages() {
+	fmt.Println("Listening for messages")
 	for {
 		msg, err := peer.getNextMessage()
 		if len(msg) == 0 || err != nil {
