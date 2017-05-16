@@ -78,3 +78,7 @@ func (peer Peer) disConnect() {
 	peer.Conn.Close()
 	peer.closeChan <- peer
 }
+
+func (peer Peer) getIP() string {
+	return peer.Conn.RemoteAddr().String()
+}
