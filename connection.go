@@ -155,7 +155,10 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					continue
 				}
 				currentTimestamp := uint32(time.Now().UTC().Unix())
+				currentTimestampBytes := make([]byte, 4)
+				binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
 				newPeer := peerManager.addNewPeer(newConn, currentTimestamp)
+				newConn.Write(currentTimestampBytes)
 				newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
@@ -168,6 +171,9 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 						newPeer.setPing()
 					}
 					newConn.Write([]byte{1})
+					currentTimestampBytes = make([]byte, 4)
+					binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
+					newConn.Write(currentTimestampBytes)
 				}
 			} else {
 				//This msg is a connection request
