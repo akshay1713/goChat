@@ -11,7 +11,7 @@ type PeerManager struct {
 	connectedPeers map[string]Peer
 }
 
-func (peerManager PeerManager) addNewPeer(conn *net.TCPConn) Peer {
+func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32) Peer {
 	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan}
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
@@ -50,4 +50,21 @@ func (peerManager PeerManager) getAllIPs() []string {
 	}
 	return peerIPs
 
+}
+
+func (peerManager *PeerManager) compareTimestampAndUpdate(conn *net.TCPConn, newTimestamp uint32, IP string) {
+	peer, exists := peerManager.connectedPeers[IP]
+	if !exists {
+		fmt.Println("Peer to update not found", IP)
+		return
+	}
+	if peer.connectedAt < newTimestamp {
+		fmt.Println("current timestamp is older, not updating")
+		return
+	}
+	fmt.Println("Updating existing peer")
+	peer.disConnect()
+	peer.Conn = conn
+	peer.connectedAt = newTimestamp
+	go peer.listenForMessages()
 }

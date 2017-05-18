@@ -132,9 +132,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 		fmt.Println("Sender IP is ", senderIP)
 		msgType := make([]byte, 1)
 		fmt.Println("Recieved new connection", senderIPString, senderIP, msgType)
-		peerIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
 		_, err = io.ReadFull(conn, msgType)
-		if !peerManager.isConnected(peerIP) {
+		if !peerManager.isConnected(senderIPString) {
 			if msgType[0] == 0 {
 				//This msg is a list of IPs & ports
 				msgLength := make([]byte, 4)
@@ -155,16 +154,17 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					fmt.Println("Nil conn")
 					continue
 				}
-				newPeer := peerManager.addNewPeer(newConn)
-				fmt.Println("Setting ping")
-				go newPeer.setPing()
+				currentTimestamp := uint32(time.Now().UTC().Unix())
+				newPeer := peerManager.addNewPeer(newConn, currentTimestamp)
+				newPeer.setPing()
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
 					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
 					peerPort := binary.BigEndian.Uint16([]byte{peerInfo[k], peerInfo[k+1]})
 					newConn, err = connectToPeer(peerIP, int(peerPort))
 					if !peerManager.isConnected(peerIP.String()) {
-						newPeer = peerManager.addNewPeer(newConn)
+						currentTimestamp = uint32(time.Now().UTC().Unix())
+						newPeer = peerManager.addNewPeer(newConn, currentTimestamp)
 						newPeer.setPing()
 					}
 					newConn.Write([]byte{1})
@@ -172,9 +172,20 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 			} else {
 				//This msg is a connection request
 				fmt.Println("Processing connection request")
-				newPeer := peerManager.addNewPeer(conn)
-				go newPeer.setPing()
+				recvdTimestampBytes := make([]byte, 4)
+				_, err := io.ReadFull(conn, recvdTimestampBytes)
+				handleErr(err, "While getting timestamp")
+				recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
+				newPeer := peerManager.addNewPeer(conn, recvdTimestamp)
+				newPeer.setPing()
 			}
+		} else if msgType[0] == 1 {
+			fmt.Println("Checking existing peer")
+			recvdTimestampBytes := make([]byte, 4)
+			_, err := io.ReadFull(conn, recvdTimestampBytes)
+			handleErr(err, "While getting timestamp")
+			recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
+			peerManager.compareTimestampAndUpdate(conn, recvdTimestamp, senderIPString)
 		}
 	}
 }

@@ -11,8 +11,9 @@ import (
 //Peer contains the following data associated with a connected peer-
 //Conn - The TCP connection with that peer
 type Peer struct {
-	Conn      *net.TCPConn
-	closeChan chan Peer
+	Conn        *net.TCPConn
+	closeChan   chan Peer
+	connectedAt uint32
 }
 
 func (peer Peer) setPing() {
@@ -22,7 +23,7 @@ func (peer Peer) setPing() {
 }
 
 func (peer Peer) sendPing() {
-	//fmt.Println("Sending Ping")
+	fmt.Println("Sending Ping")
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
