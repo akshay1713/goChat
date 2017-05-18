@@ -34,6 +34,7 @@ func (peer Peer) listenForMessages() {
 		msg, err := peer.getNextMessage()
 		if len(msg) == 0 || err != nil {
 			fmt.Println("Empty/nil message received", nil)
+			peer.disConnect()
 			return
 		}
 		msgType := getMsgType(msg)
