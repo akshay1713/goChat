@@ -148,18 +148,13 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				fmt.Println("Connecting to ", senderIPString, senderPort)
 				//splitIP := strings.Split(senderIPString, ".")
 				newConn, err := connectToPeer(senderIP, int(senderPort))
-				newConn.Write([]byte{1})
 				handleErr(err, "Error while connecting to sender")
 				if newConn == nil {
 					fmt.Println("Nil conn")
 					continue
 				}
 				currentTimestamp := uint32(time.Now().UTC().Unix())
-				currentTimestampBytes := make([]byte, 4)
-				binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
-				newPeer := peerManager.addNewPeer(newConn, currentTimestamp)
-				newConn.Write(currentTimestampBytes)
-				newPeer.setPing()
+				peerManager.addNewPeer(newConn, currentTimestamp, true)
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
 					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
@@ -167,13 +162,8 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					newConn, err = connectToPeer(peerIP, int(peerPort))
 					if !peerManager.isConnected(peerIP.String()) {
 						currentTimestamp = uint32(time.Now().UTC().Unix())
-						newPeer = peerManager.addNewPeer(newConn, currentTimestamp)
-						newPeer.setPing()
+						peerManager.addNewPeer(newConn, currentTimestamp, true)
 					}
-					newConn.Write([]byte{1})
-					currentTimestampBytes = make([]byte, 4)
-					binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
-					newConn.Write(currentTimestampBytes)
 				}
 			} else {
 				//This msg is a connection request
@@ -182,8 +172,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				_, err := io.ReadFull(conn, recvdTimestampBytes)
 				handleErr(err, "While getting timestamp")
 				recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
-				newPeer := peerManager.addNewPeer(conn, recvdTimestamp)
-				newPeer.setPing()
+				peerManager.addNewPeer(conn, recvdTimestamp, false)
 			}
 		} else if msgType[0] == 1 {
 			fmt.Println("Checking existing peer")

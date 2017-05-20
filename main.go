@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
+	//usernamePtr := flag.String("u", "", "Desired username")
+	//flag.Parse()
 	ServerAddr, err := net.ResolveUDPAddr("udp", ":7041")
 	if err != nil {
 		fmt.Println("Err while resolving IP address", err)

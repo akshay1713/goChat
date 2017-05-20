@@ -15,6 +15,7 @@ type Peer struct {
 	closeChan   chan Peer
 	connectedAt uint32
 	connected   bool
+	username    string
 }
 
 func (peer Peer) setPing() {

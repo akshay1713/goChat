@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"encoding/binary"
 )
 
 type PeerManager struct {
@@ -11,12 +12,19 @@ type PeerManager struct {
 	connectedPeers map[string]Peer
 }
 
-func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32) Peer {
+func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool) Peer {
+	if initiated {
+		conn.Write([]byte{1})
+		currentTimestampBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
+		conn.Write(currentTimestampBytes)
+	}
 	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true}
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
 	go newPeer.listenForMessages()
+	newPeer.setPing()
 	return newPeer
 }
 
