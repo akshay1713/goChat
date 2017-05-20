@@ -18,7 +18,7 @@ func getPongMsg() []byte {
 
 func getChatMsg(msgContent string) []byte {
 	chatMsg := make([]byte, len(msgContent)+5)
-	getBytesFromUint32(chatMsg[0:4], uint32(len(msgContent)))
+	getBytesFromUint32(chatMsg[0:4], uint32(len(msgContent)+1))
 	copy(chatMsg[4:5], []byte{2})
 	copy(chatMsg[5:], msgContent)
 	return chatMsg

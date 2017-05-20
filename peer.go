@@ -14,6 +14,7 @@ type Peer struct {
 	Conn        *net.TCPConn
 	closeChan   chan Peer
 	connectedAt uint32
+	connected   bool
 }
 
 func (peer Peer) setPing() {
@@ -23,7 +24,10 @@ func (peer Peer) setPing() {
 }
 
 func (peer Peer) sendPing() {
-	fmt.Println("Sending Ping")
+	if !peer.connected {
+		fmt.Println("Stopping ping")
+		return
+	}
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
 	peer.Conn.Write(pingMessage)
@@ -71,7 +75,7 @@ func (peer Peer) chatHandler(msgContent []byte) {
 }
 
 func (peer Peer) pingHandler() {
-	fmt.Println("Ping received")
+	//fmt.Println("Ping received")
 }
 
 func (peer Peer) sendPong() {
@@ -79,9 +83,10 @@ func (peer Peer) sendPong() {
 	peer.Conn.Write(pongMessage)
 }
 
-func (peer Peer) disConnect() {
+func (peer *Peer) disConnect() {
 	peer.Conn.Close()
-	peer.closeChan <- peer
+	peer.connected = false
+	peer.closeChan <- *peer
 }
 
 func (peer Peer) getIP() string {

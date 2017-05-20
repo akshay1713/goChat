@@ -12,7 +12,7 @@ type PeerManager struct {
 }
 
 func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32) Peer {
-	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan}
+	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true}
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
