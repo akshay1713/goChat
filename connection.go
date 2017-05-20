@@ -112,7 +112,7 @@ func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
 	return chatConn, err
 }
 
-func waitForTCP(peerManager PeerManager, listener net.Listener) {
+func waitForTCP(peerManager PeerManager, listener net.Listener, username string) {
 	defer listener.Close()
 	for {
 		genericConn, err := listener.Accept()
@@ -154,7 +154,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					continue
 				}
 				currentTimestamp := uint32(time.Now().UTC().Unix())
-				peerManager.addNewPeer(newConn, currentTimestamp, true)
+				peerManager.addNewPeer(newConn, currentTimestamp, true, username)
 				handleErr(err, "Error while connecting to sender")
 				for k := 2; k < len(peerInfo); k += 6 {
 					peerIP := net.IPv4(peerInfo[k+2], peerInfo[k+3], peerInfo[k+4], peerInfo[k+5])
@@ -162,7 +162,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 					newConn, err = connectToPeer(peerIP, int(peerPort))
 					if !peerManager.isConnected(peerIP.String()) {
 						currentTimestamp = uint32(time.Now().UTC().Unix())
-						peerManager.addNewPeer(newConn, currentTimestamp, true)
+						peerManager.addNewPeer(newConn, currentTimestamp, true, username)
 					}
 				}
 			} else {
@@ -172,7 +172,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener) {
 				_, err := io.ReadFull(conn, recvdTimestampBytes)
 				handleErr(err, "While getting timestamp")
 				recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
-				peerManager.addNewPeer(conn, recvdTimestamp, false)
+				peerManager.addNewPeer(conn, recvdTimestamp, false, username)
 			}
 		} else if msgType[0] == 1 {
 			fmt.Println("Checking existing peer")

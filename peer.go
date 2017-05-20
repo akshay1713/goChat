@@ -72,7 +72,7 @@ func (peer Peer) sendMessage(msgContent string) error {
 }
 
 func (peer Peer) chatHandler(msgContent []byte) {
-	fmt.Println("Msg from peer: ", string(msgContent))
+	fmt.Println(peer.username,": ", string(msgContent))
 }
 
 func (peer Peer) pingHandler() {

@@ -5,11 +5,12 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"flag"
 )
 
 func main() {
-	//usernamePtr := flag.String("u", "", "Desired username")
-	//flag.Parse()
+	usernamePtr := flag.String("u", "", "Desired username")
+	flag.Parse()
 	ServerAddr, err := net.ResolveUDPAddr("udp", ":7041")
 	if err != nil {
 		fmt.Println("Err while resolving IP address", err)
@@ -23,7 +24,7 @@ func main() {
 	closeChan := make(chan Peer)
 	peerManager := PeerManager{closeChan: closeChan, connectedPeers: peerConnections}
 	go peerManager.init()
-	go waitForTCP(peerManager, l)
+	go waitForTCP(peerManager, l, *usernamePtr)
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	ListenerAddr := l.Addr()
 	LocalAddr := initUDPBroadcast(ListenerAddr, peerConnections)

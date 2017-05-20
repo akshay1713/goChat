@@ -12,14 +12,21 @@ type PeerManager struct {
 	connectedPeers map[string]Peer
 }
 
-func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool) Peer {
+func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool, username string) Peer {
 	if initiated {
 		conn.Write([]byte{1})
 		currentTimestampBytes := make([]byte, 4)
 		binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
 		conn.Write(currentTimestampBytes)
 	}
-	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true}
+	usernameBytes := make([]byte, len(username) + 2)
+	binary.BigEndian.PutUint16(usernameBytes[0:2], uint16(len(username) + 1))
+	conn.Write([]byte(username))
+	peerUsername := make([]byte, 4)
+	conn.Read(peerUsername)
+	fmt.Println(string(peerUsername))
+	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true, username: string(peerUsername)}
+	fmt.Println("Connected to ", string(peerUsername))
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
@@ -31,7 +38,7 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 func (peerManager PeerManager) init() {
 	for {
 		disconnectedPeer := <-peerManager.closeChan
-		fmt.Println("Peer disconnected", disconnectedPeer)
+		fmt.Println(disconnectedPeer.username, " disconnected")
 	}
 }
 
