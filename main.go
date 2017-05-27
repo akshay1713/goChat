@@ -9,7 +9,16 @@ import (
 )
 
 func main() {
-	usernamePtr := flag.String("u", "", "Desired username")
+	gitPtr := flag.Bool("g", false, "Use your github username & connect " +
+		"only to the collaborators of the current repository")
+	var usernamePtr *string
+	if !*gitPtr {
+		usernamePtr = flag.String("u", "", "Desired username")
+	}
+	if *usernamePtr == "" {
+		fmt.Println("Please specify a username or chat as your github avatar")
+		return
+	}
 	flag.Parse()
 	ServerAddr, err := net.ResolveUDPAddr("udp", ":7041")
 	if err != nil {
