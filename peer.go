@@ -76,7 +76,7 @@ func (peer Peer) chatHandler(msgContent []byte) {
 }
 
 func (peer Peer) pingHandler() {
-	//fmt.Println("Ping received")
+	fmt.Println("Ping received")
 }
 
 func (peer Peer) sendPong() {
