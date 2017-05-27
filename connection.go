@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) net.Addr {
+func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer, chatType byte) net.Addr {
 	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:7041")
 	if err != nil {
 		panic(err)
@@ -31,6 +31,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 
 		port = padLeft(port, "0", 5)
 		msg = append(msg, port...)
+		msg = append(msg, chatType)
 		fmt.Println("Port found is ", port)
 		for i < 5 {
 			i++
@@ -46,11 +47,12 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer) ne
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int) {
+func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int, chatType byte) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
-	buf := make([]byte, len(appName)+portLen)
+	typeLen := 1
+	buf := make([]byte, len(appName)+portLen+typeLen)
 	broadcastRecvdIPs := make(map[string]bool)
 	portBytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(portBytes, uint16(port))
@@ -64,10 +66,14 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 		if string(buf[0:len(appName)]) != appName {
 			continue
 		}
-		recvdPort, err := strconv.Atoi(string(buf[len(appName):]))
+		recvdPort, err := strconv.Atoi(string(buf[len(appName):len(buf)-1]))
 
 		if err != nil {
 			fmt.Println("Error: ", err)
+		}
+
+		if buf[len(buf)-1] != chatType {
+			continue
 		}
 
 		//if !peerManager.isConnected(addr.IP.String()) {
