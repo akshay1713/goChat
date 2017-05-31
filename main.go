@@ -15,11 +15,11 @@ func main() {
 	if !*gitPtr {
 		usernamePtr = flag.String("u", "", "Desired username")
 	}
+	flag.Parse()
 	if *usernamePtr == "" {
 		fmt.Println("Please specify a username or chat as your github avatar")
 		return
 	}
-	flag.Parse()
 	ServerAddr, err := net.ResolveUDPAddr("udp", ":7041")
 	if err != nil {
 		fmt.Println("Err while resolving IP address", err)
