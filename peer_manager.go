@@ -20,9 +20,13 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 		conn.Write(currentTimestampBytes)
 	}
 	usernameBytes := make([]byte, len(username) + 2)
-	binary.BigEndian.PutUint16(usernameBytes[0:2], uint16(len(username) + 1))
-	conn.Write([]byte(username))
-	peerUsername := make([]byte, 4)
+	binary.BigEndian.PutUint16(usernameBytes[0:2], uint16(len(username)))
+	copy(usernameBytes[2:], username)
+	conn.Write(usernameBytes)
+	peerUsernameLenBytes := make([]byte, 2)
+	conn.Read(peerUsernameLenBytes)
+	peerUsernameLen := binary.BigEndian.Uint16(peerUsernameLenBytes)
+	peerUsername := make([]byte, peerUsernameLen)
 	conn.Read(peerUsername)
 	fmt.Println(string(peerUsername))
 	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true, username: string(peerUsername)}
