@@ -87,3 +87,23 @@ func (peerManager *PeerManager) compareTimestampAndUpdate(conn *net.TCPConn, new
 	peer.connectedAt = newTimestamp
 	go peer.listenForMessages()
 }
+
+func (peerManager PeerManager) getAllPeers() []Peer {
+	var connectedPeers []Peer
+	for _, peer := range peerManager.connectedPeers {
+		connectedPeers = append(connectedPeers, peer)
+	}
+	return connectedPeers
+}
+
+func (peerManager PeerManager) getAllUserNames() []string{
+	var usernames []string
+	for _, peer := range peerManager.connectedPeers {
+		usernames = append(usernames, peer.username)
+	}
+	return usernames
+}
+
+func (peerManager PeerManager) sendFiles(peers []Peer, filepath string) {
+	fmt.Println("Sending ", filepath, " to ", peers[0].username)
+}

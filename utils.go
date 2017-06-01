@@ -26,3 +26,14 @@ func getBytesFromUint32(source []byte, num uint32) {
 	source[2] = byte(num >> 8)
 	source[3] = byte(num)
 }
+
+func getBytesFromUint64(source []byte, num uint64) {
+	source[0] = byte(num >> 56)
+	source[1] = byte(num >> 48)
+	source[2] = byte(num >> 40)
+	source[3] = byte(num >> 32)
+	source[4] = byte(num >> 24)
+	source[5] = byte(num >> 16)
+	source[6] = byte(num >> 8)
+	source[7] = byte(num)
+}
