@@ -43,9 +43,11 @@ func (peer Peer) sendPing() {
 }
 
 func (peer Peer) listenForMessages() {
-	fmt.Println("Listening for messages")
 	for {
 		msg := <- peer.msgChan
+		if len(msg) == 0 {
+			return
+		}
 		msgType := getMsgType(msg)
 		switch msgType {
 		case "ping":
@@ -63,16 +65,16 @@ func (peer *Peer) createMsgChan() {
 	peer.stopMsgChan = make(chan bool)
 	fmt.Println("Chan created")
 	go func(){
-		fmt.Println("Listening for messager, for chan")
 		for {
 			select {
 			case <- peer.stopMsgChan:
+				fmt.Println("Stopping poll func")
 				return
 			default:
 				msg, err := peer.getNextMessage()
 				if len(msg) == 0 || err != nil {
-					fmt.Println("Empty/nil message received", nil)
 					peer.disConnect()
+					peer.stopMsgChan <- true
 					return
 				}
 				msgChan <- msg
@@ -116,6 +118,7 @@ func (peer Peer) sendPong() {
 }
 
 func (peer *Peer) disConnect() {
+	fmt.Println(peer.username, " disconnected")
 	peer.Conn.Close()
 	peer.connected = false
 	peer.closeChan <- *peer
