@@ -16,6 +16,14 @@ type Peer struct {
 	connectedAt uint32
 	connected   bool
 	username    string
+	msgChan     chan []byte
+	stopMsgChan chan bool
+}
+
+func(peer *Peer) initPeer() {
+	peer.createMsgChan()
+	go peer.listenForMessages()
+	peer.setPing()
 }
 
 func (peer Peer) setPing() {
@@ -37,12 +45,7 @@ func (peer Peer) sendPing() {
 func (peer Peer) listenForMessages() {
 	fmt.Println("Listening for messages")
 	for {
-		msg, err := peer.getNextMessage()
-		if len(msg) == 0 || err != nil {
-			fmt.Println("Empty/nil message received", nil)
-			peer.disConnect()
-			return
-		}
+		msg := <- peer.msgChan
 		msgType := getMsgType(msg)
 		switch msgType {
 		case "ping":
@@ -53,6 +56,34 @@ func (peer Peer) listenForMessages() {
 		}
 
 	}
+}
+
+func (peer *Peer) createMsgChan() {
+	msgChan := make(chan []byte)
+	peer.stopMsgChan = make(chan bool)
+	fmt.Println("Chan created")
+	go func(){
+		fmt.Println("Listening for messager, for chan")
+		for {
+			select {
+			case <- peer.stopMsgChan:
+				return
+			default:
+				msg, err := peer.getNextMessage()
+				if len(msg) == 0 || err != nil {
+					fmt.Println("Empty/nil message received", nil)
+					peer.disConnect()
+					return
+				}
+				msgChan <- msg
+			}
+		}
+	}()
+	peer.msgChan = msgChan
+}
+
+func (peer Peer) stopMsgLoop() {
+	peer.stopMsgChan <- true
 }
 
 func (peer Peer) getNextMessage() ([]byte, error) {
@@ -88,6 +119,7 @@ func (peer *Peer) disConnect() {
 	peer.Conn.Close()
 	peer.connected = false
 	peer.closeChan <- *peer
+	close(peer.msgChan)
 }
 
 func (peer Peer) getIP() string {

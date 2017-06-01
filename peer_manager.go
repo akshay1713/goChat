@@ -34,8 +34,7 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
 	peerManager.connectedPeers[peerIP] = newPeer
-	go newPeer.listenForMessages()
-	newPeer.setPing()
+	newPeer.initPeer()
 	return newPeer
 }
 
