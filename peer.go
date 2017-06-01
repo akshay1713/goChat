@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"sync"
 )
 
 type File struct {
@@ -25,12 +26,20 @@ type Peer struct {
 	stopMsgChan chan bool
 	sendingFiles []File
 	receivingFiles []File
+	sendMutex sync.Mutex
 }
 
 func(peer *Peer) initPeer() {
 	peer.createMsgChan()
 	go peer.listenForMessages()
 	peer.setPing()
+}
+
+func(peer *Peer) sendMessage(msg []byte) error {
+	peer.sendMutex.Lock()
+	_, err := peer.Conn.Write(msg)
+	peer.sendMutex.Unlock()
+	return err
 }
 
 func (peer Peer) setPing() {
@@ -46,7 +55,7 @@ func (peer Peer) sendPing() {
 	}
 	time.AfterFunc(2*time.Second, peer.sendPing)
 	pingMessage := getPingMsg()
-	peer.Conn.Write(pingMessage)
+	peer.sendMessage(pingMessage)
 }
 
 func (peer Peer) listenForMessages() {
@@ -76,7 +85,7 @@ func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 	fmt.Println("Name length: ", int(fileInfoMsg[1]))
 	fmt.Println("File length: ", binary.BigEndian.Uint64(fileInfoMsg[2:10]))
 	fmt.Println("File name: ", string(fileInfoMsg[10:]))
-	peer.Conn.Write(fileInfoMsg)
+	peer.sendMessage(fileInfoMsg)
 }
 
 func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
@@ -124,10 +133,9 @@ func (peer Peer) getNextMessage() ([]byte, error) {
 	return msg, err
 }
 
-func (peer Peer) sendMessage(msgContent string) error {
+func (peer Peer) sendChatMessage(msgContent string) error {
 	chatMsg := getChatMsg(msgContent)
-	_, err := peer.Conn.Write(chatMsg)
-	return err
+	return peer.sendMessage(chatMsg)
 }
 
 func (peer Peer) chatHandler(msgContent []byte) {
@@ -158,5 +166,5 @@ func (peer Peer) getIP() string {
 func (peer *Peer) sendFile(filePath string) {
 	fileMsg := getFileInfoMsg(6000, filePath)
 	fmt.Println("Sending file", fileMsg)
-	peer.Conn.Write(fileMsg)
+	peer.sendMessage(fileMsg)
 }

@@ -54,7 +54,7 @@ func (peerManager PeerManager) isConnected(IP string) bool {
 
 func (peerManager PeerManager) sendMessage(message string) {
 	for _, peer := range peerManager.connectedPeers {
-		err := peer.sendMessage(message)
+		err := peer.sendChatMessage(message)
 		if err != nil {
 			peer.disConnect()
 		}
