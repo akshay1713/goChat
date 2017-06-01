@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer, chatType byte) net.Addr {
-	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:7041")
+func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer, chatType byte, port string) net.Addr{
+	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:"+port)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer, ch
 	return LocalAddr
 }
 
-func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerManager PeerManager, port int, chatType byte) {
+func listenForUDPBroadcast(ServerConn *net.UDPConn, possibleLocalAddrs []string, peerManager PeerManager, port int, chatType byte) {
 	defer ServerConn.Close()
 	appName := "goChat"
 	portLen := 5
@@ -60,9 +60,10 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, LocalAddr net.Addr, peerMana
 	for {
 		_, addr, err := ServerConn.ReadFromUDP(buf)
 
-		if addr.IP.String()+":"+strconv.Itoa(addr.Port) == LocalAddr.String() {
+		if pos(possibleLocalAddrs, addr.IP.String()+":"+strconv.Itoa(addr.Port)) != -1 {
 			continue
 		}
+
 		if string(buf[0:len(appName)]) != appName {
 			continue
 		}

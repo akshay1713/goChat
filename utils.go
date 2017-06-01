@@ -37,3 +37,12 @@ func getBytesFromUint64(source []byte, num uint64) {
 	source[6] = byte(num >> 8)
 	source[7] = byte(num)
 }
+
+func pos(slice []string, value string) int {
+	for p, v := range slice {
+		if (v == value) {
+			return p
+		}
+	}
+	return -1
+}
