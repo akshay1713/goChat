@@ -30,11 +30,13 @@ func extractChatMsg(chatMsg []byte) []byte {
 
 func getFileInfoMsg(fileLen uint64, fileName string) []byte {
 	fileNameLen := uint8(len(fileName))
-	fileMsg := make([]byte, 10+fileNameLen)
-	fileMsg[0] = 3
-	fileMsg[1] = fileNameLen
-	getBytesFromUint64(fileMsg[2:], fileLen)
-	fileMsg = append(fileMsg, fileName...)
+	fileMsgLen := 10+fileNameLen
+	fileMsg := make([]byte, fileMsgLen+4)
+	getBytesFromUint32(fileMsg[0:4], uint32(fileMsgLen))
+	fileMsg[4] = 3
+	fileMsg[5] = fileNameLen
+	getBytesFromUint64(fileMsg[6:], fileLen)
+	copy(fileMsg[14:], fileName)
 	return fileMsg
 }
 
@@ -44,6 +46,7 @@ func getMsgType(msg []byte) string {
 		1: "pong",
 		2: "chat",
 		3: "file_info",
+		4: "file_accept",
 	}
 	msgType := availableMsgTypes[msg[0]]
 	return msgType

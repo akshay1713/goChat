@@ -105,4 +105,5 @@ func (peerManager PeerManager) getAllUserNames() []string{
 
 func (peerManager PeerManager) sendFiles(peers []Peer, filepath string) {
 	fmt.Println("Sending ", filepath, " to ", peers[0].username)
+	peers[0].sendFile(filepath)
 }
