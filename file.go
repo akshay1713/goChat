@@ -6,14 +6,40 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type File struct {
 	filePath           string
-	fileSize           uint32
-	transferredSize    uint32
+	fileSize           uint64
+	transferredSize    uint64
 	handshake_complete bool
 	md5                string
+	filePtr            *os.File
+}
+
+func (file File) getFileName() string {
+	return filepath.Base(file.filePath)
+}
+
+func (file *File) getNextBytes() []byte {
+	remainingSize := int(file.fileSize - file.transferredSize)
+	if remainingSize == 0 {
+		return []byte{}
+	}
+	bytesToTransfer := 4096
+	if remainingSize < 4096 {
+		bytesToTransfer = remainingSize
+	}
+	nextBytes := make([]byte, int(bytesToTransfer))
+	file.transferredSize += uint64(bytesToTransfer)
+	file.filePtr.Read(nextBytes)
+	return nextBytes
+}
+
+func (file *File) writeBytes(nextBytes []byte) {
+	file.filePtr.Write(nextBytes)
+	file.transferredSize += uint64(len(nextBytes))
 }
 
 type MultipleFiles []File
@@ -30,10 +56,83 @@ func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles {
 		fmt.Println("Checking file", files[i])
 		if files[i].md5 == md5 {
 			files[i].handshake_complete = true
+			files[i].filePtr, _ = os.Open(files[i].filePath)
 			break
 		}
 	}
 	return files
+}
+
+func (files MultipleFiles) get(md5 string) File {
+	for i := range files {
+		if files[i].md5 == md5 {
+			return files[i]
+		}
+	}
+	fmt.Println("File with md5 ", md5, "not found")
+	return File{}
+}
+
+func (files MultipleFiles) update(file File) MultipleFiles {
+	for i := range files {
+		if files[i].md5 == file.md5 {
+			files[i] = file
+			return files
+		}
+	}
+	fmt.Println("No matching file found, unchanged")
+	return files
+}
+
+func (files MultipleFiles) openForReading(md5 string) MultipleFiles {
+	fmt.Println("Opening for reading ")
+	for i := range files {
+		if files[i].md5 == md5 {
+			files[i].filePtr, _ = os.Open(files[i].filePath)
+		}
+	}
+	return files
+}
+
+func (files MultipleFiles) openForWriting(md5 string) MultipleFiles {
+	fmt.Println("Opening for writing")
+	for i := range files {
+		if files[i].md5 == md5 {
+			files[i].filePtr, _ = os.OpenFile(files[i].filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		}
+	}
+	return files
+}
+
+func (files MultipleFiles) getOpenPointer(md5 string) (*os.File, error) {
+	var reqFile File
+	for i := range files {
+		if files[i].md5 == md5 {
+			reqFile = files[i]
+			break
+		}
+	}
+	file, err := os.Open(reqFile.filePath)
+	return file, err
+}
+
+func newFile(filePath string) (File, error) {
+	md5, err := getMD5Hash(filePath)
+	file := File{
+		filePath:           filePath,
+		fileSize:           getFileSize(filePath),
+		transferredSize:    0,
+		handshake_complete: false,
+		md5:                md5,
+	}
+	return file, err
+}
+
+func getFileSize(filePath string) uint64 {
+	filePtr, _ := os.Open(filePath)
+	defer filePtr.Close()
+	fileStats, _ := filePtr.Stat()
+	return uint64(fileStats.Size())
 }
 
 func getMD5Hash(filePath string) (string, error) {

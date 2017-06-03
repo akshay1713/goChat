@@ -41,6 +41,22 @@ func getFileInfoMsg(fileLen uint64, fileName string, md5 string) []byte {
 	return fileMsg
 }
 
+func getFileDataMsg(fileData []byte, md5 string) []byte {
+	fileDataMsg := make([]byte, 4+len(fileData)+32)
+	msgLen := len(fileData) + 32
+	getBytesFromUint32(fileDataMsg[0:4], uint32(msgLen))
+	fileDataMsg[4] = 5
+	copy(fileDataMsg[5:37], md5)
+	copy(fileDataMsg[37:], fileData)
+	return fileDataMsg
+}
+
+func extractFileDataFromMsg(fileMsg []byte) (string, []byte) {
+	md5 := string(fileMsg[0:32])
+	fileData := fileMsg[32:]
+	return md5, fileData
+}
+
 func getMsgType(msg []byte) string {
 	availableMsgTypes := map[byte]string{
 		0: "ping",
@@ -48,6 +64,7 @@ func getMsgType(msg []byte) string {
 		2: "chat",
 		3: "file_info",
 		4: "file_accept",
+		5: "file_data",
 	}
 	msgType := availableMsgTypes[msg[0]]
 	return msgType

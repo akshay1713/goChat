@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -74,6 +73,8 @@ func (peer *Peer) listenForMessages() {
 			peer.fileInfoHandler(msg)
 		case "file_accept":
 			peer.fileAcceptHandler(msg)
+		case "file_data":
+			peer.fileDataHandler(msg)
 		}
 
 	}
@@ -82,20 +83,23 @@ func (peer *Peer) listenForMessages() {
 func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 	fileName := string(fileInfoMsg[26:])
 	md5 := string(fileInfoMsg[10:42])
+	fileLength := binary.BigEndian.Uint64(fileInfoMsg[2:10])
 	fmt.Println("File info message received", fileInfoMsg)
 	fmt.Println("Name length: ", int(fileInfoMsg[1]))
-	fmt.Println("File length: ", binary.BigEndian.Uint64(fileInfoMsg[2:10]))
+	fmt.Println("File length: ")
 	fmt.Println("File md5: ", md5)
 	fmt.Println("File name: ", fileName)
+	//Get user approval before sending acceptance message here
 	fmt.Println("Sending acceptance message")
 	file := File{
 		filePath:           fileName,
-		fileSize:           100,
+		fileSize:           fileLength,
 		transferredSize:    0,
 		handshake_complete: true,
 		md5:                md5,
 	}
 	peer.receivingFiles = peer.receivingFiles.add(file)
+	peer.receivingFiles = peer.receivingFiles.openForWriting(md5)
 	fileAcceptMsg := make([]byte, len(fileInfoMsg)+4)
 	getBytesFromUint32(fileAcceptMsg[0:4], uint32(len(fileInfoMsg)))
 	fileAcceptMsg[4] = 4
@@ -111,7 +115,7 @@ func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
 	fmt.Println("File md5: ", md5)
 	fmt.Println("File name: ", string(fileInfoMsg[42:]))
 	peer.sendingFiles = peer.sendingFiles.updateAfterHandshake(md5)
-	fmt.Println(peer.sendingFiles)
+	go peer.sendFileData(md5)
 }
 
 func (peer *Peer) transferFile() {}
@@ -189,17 +193,26 @@ func (peer Peer) getIPWithoutPort() string {
 }
 
 func (peer *Peer) sendFile(filePath string) {
-	md5, _ := getMD5Hash(filePath)
-	fileName := filepath.Base(filePath)
-	fileMsg := getFileInfoMsg(6000, fileName, md5)
-	fmt.Println("Sending file", fileMsg, " to ", peer.username)
-	file := File{
-		filePath:           filePath,
-		fileSize:           100,
-		transferredSize:    0,
-		handshake_complete: false,
-		md5:                md5,
-	}
+	file, _ := newFile(filePath)
+	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5)
 	peer.sendingFiles = peer.sendingFiles.add(file)
 	peer.sendMessage(fileMsg)
+}
+
+func (peer *Peer) sendFileData(md5 string) {
+	fileToSend := peer.sendingFiles.get(md5)
+	nextBytes := fileToSend.getNextBytes()
+	for len(nextBytes) > 0 {
+		fileDataMsg := getFileDataMsg(nextBytes, fileToSend.md5)
+		peer.sendMessage(fileDataMsg)
+		peer.sendingFiles = peer.sendingFiles.update(fileToSend)
+		nextBytes = fileToSend.getNextBytes()
+	}
+}
+
+func (peer *Peer) fileDataHandler(fileDataMsg []byte) {
+	md5, fileData := extractFileDataFromMsg(fileDataMsg)
+	fileToWrite := peer.receivingFiles.get(md5)
+	fileToWrite.writeBytes(fileData)
+	peer.receivingFiles = peer.receivingFiles.update(fileToWrite)
 }

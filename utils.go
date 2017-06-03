@@ -20,6 +20,11 @@ func handleErr(err error, prefix string) {
 	}
 }
 
+func getBytesFromUint16(source []byte, num uint16) {
+	source[0] = byte(num >> 8)
+	source[1] = byte(num)
+}
+
 func getBytesFromUint32(source []byte, num uint32) {
 	source[0] = byte(num >> 24)
 	source[1] = byte(num >> 16)
