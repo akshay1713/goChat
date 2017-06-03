@@ -20,7 +20,7 @@ func main() {
 		fmt.Println("Please specify a username or chat as your github avatar")
 		return
 	}
-	peerConnections := make(map[string]Peer)
+	peerConnections := make(map[string]*Peer)
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
 		fmt.Println("Err while listening for connections", err)
@@ -39,7 +39,7 @@ func main() {
 		if ServerConn == nil {
 			ServerConn, err = net.ListenUDP("udp", ServerAddr)
 		}
-		tempLocalAddr := initUDPBroadcast(ListenerAddr, peerConnections, byte(0), candidatePorts[i])
+		tempLocalAddr := initUDPBroadcast(ListenerAddr, byte(0), candidatePorts[i])
 		if err != nil {
 			fmt.Println("Err while listening to the address", err)
 		} else {

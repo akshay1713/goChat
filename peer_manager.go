@@ -9,7 +9,7 @@ import (
 
 type PeerManager struct {
 	closeChan      chan Peer
-	connectedPeers map[string]Peer
+	connectedPeers map[string]*Peer
 }
 
 func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool, username string) Peer {
@@ -33,7 +33,7 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 	fmt.Println("Connected to ", string(peerUsername))
 	peerAddress := conn.RemoteAddr().String()
 	peerIP := strings.Split(peerAddress, ":")[0]
-	peerManager.connectedPeers[peerIP] = newPeer
+	peerManager.connectedPeers[peerIP] = &newPeer
 	newPeer.initPeer()
 	return newPeer
 }
@@ -64,7 +64,7 @@ func (peerManager PeerManager) sendMessage(message string) {
 func (peerManager PeerManager) getAllIPs() []string {
 	var peerIPs []string
 	for _, peer := range peerManager.connectedPeers {
-		peerIPs = append(peerIPs, peer.getIP())
+		peerIPs = append(peerIPs, peer.getIPWithPort())
 	}
 	return peerIPs
 
@@ -90,7 +90,7 @@ func (peerManager *PeerManager) compareTimestampAndUpdate(conn *net.TCPConn, new
 func (peerManager PeerManager) getAllPeers() []Peer {
 	var connectedPeers []Peer
 	for _, peer := range peerManager.connectedPeers {
-		connectedPeers = append(connectedPeers, peer)
+		connectedPeers = append(connectedPeers, *peer)
 	}
 	return connectedPeers
 }
@@ -103,7 +103,13 @@ func (peerManager PeerManager) getAllUserNames() []string{
 	return usernames
 }
 
-func (peerManager PeerManager) sendFiles(peers []Peer, filepath string) {
-	fmt.Println("Sending ", filepath, " to ", peers[0].username)
-	peers[0].sendFile(filepath)
+func (peerManager *PeerManager) sendFiles(peerIPs []string, filepath string) {
+	for i := range peerIPs {
+		if _, exists := peerManager.connectedPeers[peerIPs[i]]; exists {
+			peerManager.connectedPeers[peerIPs[i]].sendFile(filepath)
+		} else {
+			fmt.Println("Does not exist", peerIPs[i])
+		}
+	}
 }
+

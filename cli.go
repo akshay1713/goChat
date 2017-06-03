@@ -45,8 +45,8 @@ func startCli(peerManager PeerManager) {
 				return
 			}
 			//Add support for multiple target peers later
-			targetPeers := []Peer{connectedPeers[peerIndex]}
-			peerManager.sendFiles(targetPeers, filePath)
+			targeUsernames := []string{connectedPeers[peerIndex].getIPWithoutPort()}
+			peerManager.sendFiles(targeUsernames, filePath)
 		},
 	})
 	shell.Start()

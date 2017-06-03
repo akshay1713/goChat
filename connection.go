@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func initUDPBroadcast(ListenerAddr net.Addr, peerConnections map[string]Peer, chatType byte, port string) net.Addr{
+func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Addr{
 	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:"+port)
 	if err != nil {
 		panic(err)

@@ -8,6 +8,7 @@ import (
 	"time"
 	"sync"
 	"path/filepath"
+	"strings"
 )
 
 //Peer contains the following data associated with a connected peer-
@@ -179,15 +180,19 @@ func (peer *Peer) disConnect() {
 	close(peer.msgChan)
 }
 
-func (peer Peer) getIP() string {
+func (peer Peer) getIPWithPort() string {
 	return peer.Conn.RemoteAddr().String()
+}
+
+func (peer Peer) getIPWithoutPort() string {
+	return strings.Split(peer.Conn.RemoteAddr().String(), ":")[0]
 }
 
 func (peer *Peer) sendFile(filePath string) {
 	md5, _ := getMD5Hash(filePath)
 	fileName := filepath.Base(filePath)
 	fileMsg := getFileInfoMsg(6000, fileName, md5)
-	fmt.Println("Sending file", fileMsg)
+	fmt.Println("Sending file", fileMsg, " to ", peer.username)
 	file := File {
 		filePath: filePath,
 		fileSize: 100,
