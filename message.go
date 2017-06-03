@@ -28,15 +28,16 @@ func extractChatMsg(chatMsg []byte) []byte {
 	return chatMsg[1:]
 }
 
-func getFileInfoMsg(fileLen uint64, fileName string) []byte {
+func getFileInfoMsg(fileLen uint64, fileName string, md5 string) []byte {
 	fileNameLen := uint8(len(fileName))
-	fileMsgLen := 10+fileNameLen
+	fileMsgLen := 10+fileNameLen+32
 	fileMsg := make([]byte, fileMsgLen+4)
 	getBytesFromUint32(fileMsg[0:4], uint32(fileMsgLen))
 	fileMsg[4] = 3
 	fileMsg[5] = fileNameLen
 	getBytesFromUint64(fileMsg[6:], fileLen)
-	copy(fileMsg[14:], fileName)
+	copy(fileMsg[14:], md5)
+	copy(fileMsg[46:], fileName)
 	return fileMsg
 }
 

@@ -7,13 +7,9 @@ import (
 	"net"
 	"time"
 	"sync"
+	"path/filepath"
 )
 
-type File struct {
-	filePath   string
-	percentage int
-	handshake_complete bool
-}
 //Peer contains the following data associated with a connected peer-
 //Conn - The TCP connection with that peer
 type Peer struct {
@@ -24,8 +20,8 @@ type Peer struct {
 	username    string
 	msgChan     chan []byte
 	stopMsgChan chan bool
-	sendingFiles []File
-	receivingFiles []File
+	sendingFiles MultipleFiles
+	receivingFiles MultipleFiles
 	sendMutex sync.Mutex
 }
 
@@ -33,6 +29,8 @@ func(peer *Peer) initPeer() {
 	peer.createMsgChan()
 	go peer.listenForMessages()
 	peer.setPing()
+	//peer.sendingFiles = []File{}
+	//peer.receivingFiles = []File{}
 }
 
 func(peer *Peer) sendMessage(msg []byte) error {
@@ -81,19 +79,41 @@ func (peer Peer) listenForMessages() {
 }
 
 func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
+	fileName := string(fileInfoMsg[26:])
+	md5 := string(fileInfoMsg[10:42])
 	fmt.Println("File info message received", fileInfoMsg)
 	fmt.Println("Name length: ", int(fileInfoMsg[1]))
 	fmt.Println("File length: ", binary.BigEndian.Uint64(fileInfoMsg[2:10]))
-	fmt.Println("File name: ", string(fileInfoMsg[10:]))
-	peer.sendMessage(fileInfoMsg)
+	fmt.Println("File md5: ", md5)
+	fmt.Println("File name: ", fileName)
+	fmt.Println("Sending acceptance message")
+	file := File {
+		filePath: fileName,
+		fileSize: 100,
+		transferredSize: 0,
+		handshake_complete: true,
+		md5: md5,
+	}
+	peer.receivingFiles = peer.receivingFiles.add(file)
+	fileAcceptMsg := make([]byte, len(fileInfoMsg) + 4)
+	getBytesFromUint32(fileAcceptMsg[0:4], uint32(len(fileInfoMsg)))
+	fileAcceptMsg[4] = 4
+	copy(fileAcceptMsg[5:], fileInfoMsg[1:])
+	peer.sendMessage(fileAcceptMsg)
 }
 
 func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
-	fmt.Println("File info message received", fileInfoMsg)
+	md5 := string(fileInfoMsg[10:42])
+	fmt.Println("File acceptance message received", fileInfoMsg)
 	fmt.Println("Name length: ", int(fileInfoMsg[1]))
 	fmt.Println("File length: ", binary.BigEndian.Uint64(fileInfoMsg[2:10]))
-	fmt.Println("File name: ", string(fileInfoMsg[10:]))
+	fmt.Println("File md5: ", string(fileInfoMsg[10:26]))
+	fmt.Println("File name: ", string(fileInfoMsg[42:]))
+	peer.sendingFiles = peer.sendingFiles.updateAfterHandshake(md5)
+	fmt.Println(peer.sendingFiles)
 }
+
+func (peer *Peer) transferFile() {}
 
 func (peer *Peer) createMsgChan() {
 	msgChan := make(chan []byte)
@@ -164,7 +184,18 @@ func (peer Peer) getIP() string {
 }
 
 func (peer *Peer) sendFile(filePath string) {
-	fileMsg := getFileInfoMsg(6000, filePath)
+	md5, _ := getMD5Hash(filePath)
+	fileName := filepath.Base(filePath)
+	fileMsg := getFileInfoMsg(6000, fileName, md5)
 	fmt.Println("Sending file", fileMsg)
+	file := File {
+		filePath: filePath,
+		fileSize: 100,
+		transferredSize: 0,
+		handshake_complete: false,
+		md5: md5,
+	}
+	peer.sendingFiles = peer.sendingFiles.add(file)
+	fmt.Println("Not added here", peer.sendingFiles)
 	peer.sendMessage(fileMsg)
 }
