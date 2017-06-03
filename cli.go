@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/abiosoft/ishell"
 	"os"
-	"fmt"
 )
 
-func startCli(peerManager PeerManager) {
+func startCli(peerManager *PeerManager) {
 	shell := ishell.New()
 	shell.Println("Started goChat")
 	shell.AddCmd(&ishell.Cmd{
@@ -27,7 +27,7 @@ func startCli(peerManager PeerManager) {
 	shell.AddCmd(&ishell.Cmd{
 		Name: "send_file",
 		Help: "Send a file to a peer",
-		Func: func (c*ishell.Context) {
+		Func: func(c *ishell.Context) {
 			var filePath string
 			fmt.Print("Enter the file path you wish to send: ")
 			fmt.Scanln(&filePath)
@@ -35,7 +35,7 @@ func startCli(peerManager PeerManager) {
 			connectedPeers := peerManager.getAllPeers()
 			fmt.Println("Connected peers are: ")
 			for i := range connectedPeers {
-				fmt.Println(i,". ",connectedPeers[i].username)
+				fmt.Println(i, ". ", connectedPeers[i].username)
 			}
 			var peerIndex int
 			fmt.Print("Enter the index of the peer to whom you wish to send the file: ")
@@ -47,6 +47,13 @@ func startCli(peerManager PeerManager) {
 			//Add support for multiple target peers later
 			targeUsernames := []string{connectedPeers[peerIndex].getIPWithoutPort()}
 			peerManager.sendFiles(targeUsernames, filePath)
+		},
+	})
+	shell.AddCmd(&ishell.Cmd{
+		Name: "print",
+		Help: "Print peers",
+		Func: func(c *ishell.Context) {
+			peerManager.printAll()
 		},
 	})
 	shell.Start()

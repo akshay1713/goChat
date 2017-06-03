@@ -1,32 +1,32 @@
 package main
 
 import (
-	"os"
 	"crypto/md5"
-	"io"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
 )
 
 type File struct {
-	filePath   string
-	fileSize   uint32
-	transferredSize uint32
+	filePath           string
+	fileSize           uint32
+	transferredSize    uint32
 	handshake_complete bool
-	md5 string
+	md5                string
 }
 
 type MultipleFiles []File
 
-func (files MultipleFiles) add(newFile File) MultipleFiles{
+func (files MultipleFiles) add(newFile File) MultipleFiles {
 	files = append(files, newFile)
 	fmt.Println("Added to slice ", files)
 	return files
 }
 
-func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles{
+func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles {
 	fmt.Println("Files received for update", files)
-	for i:= range files {
+	for i := range files {
 		fmt.Println("Checking file", files[i])
 		if files[i].md5 == md5 {
 			files[i].handshake_complete = true
@@ -35,7 +35,6 @@ func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles{
 	}
 	return files
 }
-
 
 func getMD5Hash(filePath string) (string, error) {
 	var returnMD5String string

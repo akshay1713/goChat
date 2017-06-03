@@ -40,7 +40,7 @@ func getBytesFromUint64(source []byte, num uint64) {
 
 func pos(slice []string, value string) int {
 	for p, v := range slice {
-		if (v == value) {
+		if v == value {
 			return p
 		}
 	}

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Addr{
+func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Addr {
 	ServerAddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:"+port)
 	if err != nil {
 		panic(err)
@@ -67,7 +67,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, possibleLocalAddrs []string,
 		if string(buf[0:len(appName)]) != appName {
 			continue
 		}
-		recvdPort, err := strconv.Atoi(string(buf[len(appName):len(buf)-1]))
+		recvdPort, err := strconv.Atoi(string(buf[len(appName) : len(buf)-1]))
 
 		if err != nil {
 			fmt.Println("Error: ", err)

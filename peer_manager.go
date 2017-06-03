@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 	"strings"
-	"encoding/binary"
 )
 
 type PeerManager struct {
@@ -19,7 +19,7 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 		binary.BigEndian.PutUint32(currentTimestampBytes, currentTimestamp)
 		conn.Write(currentTimestampBytes)
 	}
-	usernameBytes := make([]byte, len(username) + 2)
+	usernameBytes := make([]byte, len(username)+2)
 	binary.BigEndian.PutUint16(usernameBytes[0:2], uint16(len(username)))
 	copy(usernameBytes[2:], username)
 	conn.Write(usernameBytes)
@@ -95,12 +95,18 @@ func (peerManager PeerManager) getAllPeers() []Peer {
 	return connectedPeers
 }
 
-func (peerManager PeerManager) getAllUserNames() []string{
+func (peerManager PeerManager) getAllUserNames() []string {
 	var usernames []string
 	for _, peer := range peerManager.connectedPeers {
 		usernames = append(usernames, peer.username)
 	}
 	return usernames
+}
+
+func (peerManager PeerManager) printAll() {
+	for k, v := range peerManager.connectedPeers {
+		fmt.Println(k, ":", v)
+	}
 }
 
 func (peerManager *PeerManager) sendFiles(peerIPs []string, filepath string) {
@@ -112,4 +118,3 @@ func (peerManager *PeerManager) sendFiles(peerIPs []string, filepath string) {
 		}
 	}
 }
-
