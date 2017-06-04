@@ -32,7 +32,7 @@ func extractChatMsg(chatMsg []byte) []byte {
 
 func getFileInfoMsg(fileLen uint64, fileName string, md5 string, uniqueID uint32) []byte {
 	fileNameLen := uint8(len(fileName))
-	fileMsgLen := 10 + fileNameLen + 32
+	fileMsgLen := 10 + fileNameLen + 32 + 4
 	fileMsg := make([]byte, fileMsgLen+4)
 	getBytesFromUint32(fileMsg[0:4], uint32(fileMsgLen))
 	fileMsg[4] = 3
