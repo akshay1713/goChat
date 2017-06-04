@@ -32,7 +32,6 @@ func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Add
 		port = padLeft(port, "0", 5)
 		msg = append(msg, port...)
 		msg = append(msg, chatType)
-		fmt.Println("Port found is ", port)
 		for i < 5 {
 			i++
 			buf := []byte(msg)
@@ -42,7 +41,6 @@ func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Add
 			}
 			time.Sleep(time.Second * 1)
 		}
-		fmt.Println("Finished broadcasting")
 	}()
 	return LocalAddr
 }
@@ -113,7 +111,6 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, possibleLocalAddrs []string,
 }
 
 func connectToPeer(ip net.IP, port int) (*net.TCPConn, error) {
-	fmt.Println("Connecting to ", ip, port)
 	tcpAddr := net.TCPAddr{IP: ip, Port: port}
 	chatConn, err := net.DialTCP("tcp", nil, &tcpAddr)
 	return chatConn, err
@@ -136,9 +133,7 @@ func waitForTCP(peerManager PeerManager, listener net.Listener, username string)
 			octetInt, _ := strconv.Atoi(senderIPOctets[i])
 			senderIP = append(senderIP, byte(octetInt))
 		}
-		fmt.Println("Sender IP is ", senderIP)
 		msgType := make([]byte, 1)
-		fmt.Println("Recieved new connection", senderIPString, senderIP, msgType)
 		_, err = io.ReadFull(conn, msgType)
 		if !peerManager.isConnected(senderIPString) {
 			if msgType[0] == 0 {
@@ -147,12 +142,10 @@ func waitForTCP(peerManager PeerManager, listener net.Listener, username string)
 				_, err = io.ReadFull(conn, msgLength)
 				handleErr(err, "Error while reading message ")
 				peerInfoLength := binary.BigEndian.Uint32(msgLength)
-				fmt.Println("Msg length ", msgLength, peerInfoLength)
 				peerInfo := make([]byte, peerInfoLength)
 				_, err = io.ReadFull(conn, peerInfo)
 				handleErr(err, "Error while reading message ")
 				senderPort := binary.BigEndian.Uint16([]byte{peerInfo[0], peerInfo[1]})
-				fmt.Println("Connecting to ", senderIPString, senderPort)
 				//splitIP := strings.Split(senderIPString, ".")
 				newConn, err := connectToPeer(senderIP, int(senderPort))
 				handleErr(err, "Error while connecting to sender")
@@ -174,7 +167,6 @@ func waitForTCP(peerManager PeerManager, listener net.Listener, username string)
 				}
 			} else {
 				//This msg is a connection request
-				fmt.Println("Processing connection request")
 				recvdTimestampBytes := make([]byte, 4)
 				_, err := io.ReadFull(conn, recvdTimestampBytes)
 				handleErr(err, "While getting timestamp")

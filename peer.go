@@ -43,7 +43,6 @@ func (peer *Peer) sendMessage(msg []byte) error {
 }
 
 func (peer Peer) setPing() {
-	fmt.Println("Setting Ping")
 	// Do NOT forget to increase this time later
 	time.AfterFunc(2*time.Second, peer.sendPing)
 }

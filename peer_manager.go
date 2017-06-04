@@ -28,7 +28,6 @@ func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp ui
 	peerUsernameLen := binary.BigEndian.Uint16(peerUsernameLenBytes)
 	peerUsername := make([]byte, peerUsernameLen)
 	conn.Read(peerUsername)
-	fmt.Println(string(peerUsername))
 	newPeer := Peer{Conn: conn, closeChan: peerManager.closeChan, connected: true, username: string(peerUsername)}
 	fmt.Println("Connected to ", string(peerUsername))
 	peerAddress := conn.RemoteAddr().String()
