@@ -1,7 +1,8 @@
 package main
 
-import ()
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 func getPingMsg() []byte {
 	pingMsg := make([]byte, 5)
@@ -44,9 +45,9 @@ func getFileInfoMsg(fileLen uint64, fileName string, md5 string, uniqueID uint32
 }
 
 func getFileDataMsg(fileData []byte, uniqueID uint32) []byte {
-	fileDataMsg := make([]byte, 4+len(fileData)+32)
+	fileDataMsg := make([]byte, 5+len(fileData)+32)
 	msgLen := len(fileData) + 32
-	getBytesFromUint32(fileDataMsg[0:4], uint32(msgLen))
+	getBytesFromUint32(fileDataMsg[0:4], uint32(msgLen)+1)
 	fileDataMsg[4] = 5
 	getBytesFromUint32(fileDataMsg[5:37], uniqueID)
 	copy(fileDataMsg[37:], fileData)
