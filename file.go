@@ -24,16 +24,20 @@ func (file File) getFileName() string {
 	return filepath.Base(file.filePath)
 }
 
+//getNextBytes gets the next bytes to transfer to a peer, for a file which is currently being transferred to a peer
+//Returns data in chunks of 4096 bytes.
+//Required an open pointer to the file to exist
 func (file *File) getNextBytes() []byte {
 	remainingSize := int(file.fileSize - file.transferredSize)
 	if remainingSize == 0 {
 		return []byte{}
 	}
+	//Transfer in chunks of 4096 bytes
 	bytesToTransfer := 4096
 	if remainingSize < 4096 {
 		bytesToTransfer = remainingSize
 		defer file.filePtr.Close()
-		fmt.Println("Finished sending file")
+		fmt.Println("Finished sending file", file.getFileName())
 	}
 	nextBytes := make([]byte, int(bytesToTransfer))
 	file.transferredSize += uint64(bytesToTransfer)
@@ -41,12 +45,14 @@ func (file *File) getNextBytes() []byte {
 	return nextBytes
 }
 
+//writeBytes writes the given bytes to a file which is already open, and is being transferred by a peer.
+//Requires an open pointer to the file to exist
 func (file *File) writeBytes(nextBytes []byte) {
 	file.filePtr.Write(nextBytes)
 	file.transferredSize += uint64(len(nextBytes))
 	if file.transferredSize == file.fileSize {
 		file.filePtr.Close()
-		fmt.Println("Finished receiving file")
+		fmt.Println("Finished receiving file", file.getFileName())
 	}
 }
 
@@ -54,14 +60,13 @@ type MultipleFiles []File
 
 func (files MultipleFiles) add(newFile File) MultipleFiles {
 	files = append(files, newFile)
-	fmt.Println("Added to slice ", files)
 	return files
 }
 
+//updateAfterHandshake finds an updates the specific file object after the potential file receiver sends a file
+//acceptance message. Also opens a file pointer to the file, to make it ready for transfer.
 func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles {
-	fmt.Println("Files received for update", files)
 	for i := range files {
-		fmt.Println("Checking file", files[i])
 		if files[i].md5 == md5 {
 			files[i].handshake_complete = true
 			files[i].filePtr, _ = os.Open(files[i].filePath)
@@ -71,6 +76,8 @@ func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles {
 	return files
 }
 
+//get accepts a unique id associated with a file, with a peer, and returns that file object if found.
+//If not found, an empty File object is returned
 func (files MultipleFiles) get(uniqueID uint32) File {
 	for i := range files {
 		if files[i].uniqueID == uniqueID {
@@ -81,6 +88,8 @@ func (files MultipleFiles) get(uniqueID uint32) File {
 	return File{}
 }
 
+//update updates the structure containing multiple files, by replacing an existing file object with the given File
+//object, and uses the md5 to find the File object which is supposed to be replaced
 func (files MultipleFiles) update(file File) MultipleFiles {
 	for i := range files {
 		if files[i].md5 == file.md5 {
@@ -93,7 +102,6 @@ func (files MultipleFiles) update(file File) MultipleFiles {
 }
 
 func (files MultipleFiles) openForReading(md5 string) MultipleFiles {
-	fmt.Println("Opening for reading ")
 	for i := range files {
 		if files[i].md5 == md5 {
 			files[i].filePtr, _ = os.Open(files[i].filePath)
@@ -103,7 +111,6 @@ func (files MultipleFiles) openForReading(md5 string) MultipleFiles {
 }
 
 func (files MultipleFiles) openForWriting(md5 string) MultipleFiles {
-	fmt.Println("Opening for writing")
 	for i := range files {
 		if files[i].md5 == md5 {
 			files[i].filePtr, _ = os.OpenFile(files[i].filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)

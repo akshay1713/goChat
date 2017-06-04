@@ -33,6 +33,8 @@ func (peer *Peer) initPeer() {
 	//peer.receivingFiles = []File{}
 }
 
+//sendMessage is the route through which all messages are sent to a peer.
+//Uses a mutex(not strictly necessary)
 func (peer *Peer) sendMessage(msg []byte) error {
 	peer.sendMutex.Lock()
 	_, err := peer.Conn.Write(msg)
@@ -80,12 +82,14 @@ func (peer *Peer) listenForMessages() {
 	}
 }
 
+//fileInfoHandler handles the message which informs the user that a peer wants to send a file.
+//Sends a file acceptance message to that peer and creates a File object with the necessary parameters
 func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 	fileName := string(fileInfoMsg[46:])
 	md5 := string(fileInfoMsg[10:42])
 	uniqueID := binary.BigEndian.Uint32(fileInfoMsg[42:46])
 	fileLength := binary.BigEndian.Uint64(fileInfoMsg[2:10])
-	fmt.Println("File name: ", fileName)
+	fmt.Println("Receiving file ", fileName, "from ", peer.username)
 	//Get user approval before sending acceptance message here
 	fmt.Println("Sending acceptance message")
 	file := File{
@@ -105,6 +109,9 @@ func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 	peer.sendMessage(fileAcceptMsg)
 }
 
+//fileAcceptanceHandler handles a file acceptance message from a peer to whom the user had earlier sent a file info
+// message, letting it know that it wants to initiate a file transfer. Updates the relevant File object, and starts
+//sending the file
 func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
 	md5 := string(fileInfoMsg[10:42])
 	uniqueID := binary.BigEndian.Uint32(fileInfoMsg[42:46])
@@ -112,12 +119,11 @@ func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
 	go peer.sendFileData(uniqueID)
 }
 
-func (peer *Peer) transferFile() {}
 
+//createMsgChan creates a chan into which all the messages sent by a peer will be sent
 func (peer *Peer) createMsgChan() {
 	msgChan := make(chan []byte)
 	peer.stopMsgChan = make(chan bool)
-	fmt.Println("Chan created")
 	go func() {
 		for {
 			select {
@@ -142,6 +148,8 @@ func (peer Peer) stopMsgLoop() {
 	peer.stopMsgChan <- true
 }
 
+//getNextMessage gets the next message from a connected peer. Each message is preceded by 4 bytes containing the length
+//of the actual message. The first byte of the actual message identifies the type of the message
 func (peer Peer) getNextMessage() ([]byte, error) {
 	msgLength := 4
 	lengthMsg := make([]byte, msgLength)
@@ -152,6 +160,7 @@ func (peer Peer) getNextMessage() ([]byte, error) {
 	return msg, err
 }
 
+//sendChatMessage sends a chat message to the peer
 func (peer Peer) sendChatMessage(msgContent string) error {
 	chatMsg := getChatMsg(msgContent)
 	return peer.sendMessage(chatMsg)
@@ -186,6 +195,8 @@ func (peer Peer) getIPWithoutPort() string {
 	return strings.Split(peer.Conn.RemoteAddr().String(), ":")[0]
 }
 
+//sendFile sends a file info message to a peer, containing information regarding the file which needs to be sent
+//The actual file isn't sent until a file acceptance message is received from the peer
 func (peer *Peer) sendFile(filePath string) {
 	file, _ := newFile(strings.TrimSpace(filePath))
 	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5, file.uniqueID)
@@ -193,6 +204,8 @@ func (peer *Peer) sendFile(filePath string) {
 	peer.sendMessage(fileMsg)
 }
 
+//sendFileData sends the actual file to a peer, who has sent a file acceptance message for a file info message sent
+//to it earlier
 func (peer *Peer) sendFileData(uniqueID uint32) {
 	fileToSend := peer.sendingFiles.get(uniqueID)
 	nextBytes := fileToSend.getNextBytes()
@@ -204,6 +217,8 @@ func (peer *Peer) sendFileData(uniqueID uint32) {
 	}
 }
 
+//fileDataHandler receives the file data for a file being transferred to the user by a peer. The data is written to a
+//file
 func (peer *Peer) fileDataHandler(fileDataMsg []byte) {
 	uniqueID, fileData := extractFileDataFromMsg(fileDataMsg)
 	fileToWrite := peer.receivingFiles.get(uniqueID)
