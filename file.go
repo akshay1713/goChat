@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type File struct {
@@ -16,6 +17,7 @@ type File struct {
 	handshake_complete bool
 	md5                string
 	filePtr            *os.File
+	uniqueID           uint32
 }
 
 func (file File) getFileName() string {
@@ -30,6 +32,8 @@ func (file *File) getNextBytes() []byte {
 	bytesToTransfer := 4096
 	if remainingSize < 4096 {
 		bytesToTransfer = remainingSize
+		defer file.filePtr.Close()
+		fmt.Println("Finished sending file")
 	}
 	nextBytes := make([]byte, int(bytesToTransfer))
 	file.transferredSize += uint64(bytesToTransfer)
@@ -40,6 +44,10 @@ func (file *File) getNextBytes() []byte {
 func (file *File) writeBytes(nextBytes []byte) {
 	file.filePtr.Write(nextBytes)
 	file.transferredSize += uint64(len(nextBytes))
+	if file.transferredSize == file.fileSize {
+		file.filePtr.Close()
+		fmt.Println("Finished receiving file")
+	}
 }
 
 type MultipleFiles []File
@@ -63,13 +71,13 @@ func (files MultipleFiles) updateAfterHandshake(md5 string) MultipleFiles {
 	return files
 }
 
-func (files MultipleFiles) get(md5 string) File {
+func (files MultipleFiles) get(uniqueID uint32) File {
 	for i := range files {
-		if files[i].md5 == md5 {
+		if files[i].uniqueID == uniqueID {
 			return files[i]
 		}
 	}
-	fmt.Println("File with md5 ", md5, "not found")
+	fmt.Println("File with uniqueID ", uniqueID, "not found")
 	return File{}
 }
 
@@ -124,6 +132,7 @@ func newFile(filePath string) (File, error) {
 		transferredSize:    0,
 		handshake_complete: false,
 		md5:                md5,
+		uniqueID:           uint32(time.Now().UTC().Unix()),
 	}
 	return file, err
 }

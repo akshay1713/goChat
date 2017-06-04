@@ -81,13 +81,10 @@ func (peer *Peer) listenForMessages() {
 }
 
 func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
-	fileName := string(fileInfoMsg[26:])
+	fileName := string(fileInfoMsg[46:])
 	md5 := string(fileInfoMsg[10:42])
+	uniqueID := binary.BigEndian.Uint32(fileInfoMsg[42:46])
 	fileLength := binary.BigEndian.Uint64(fileInfoMsg[2:10])
-	fmt.Println("File info message received", fileInfoMsg)
-	fmt.Println("Name length: ", int(fileInfoMsg[1]))
-	fmt.Println("File length: ")
-	fmt.Println("File md5: ", md5)
 	fmt.Println("File name: ", fileName)
 	//Get user approval before sending acceptance message here
 	fmt.Println("Sending acceptance message")
@@ -97,6 +94,7 @@ func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 		transferredSize:    0,
 		handshake_complete: true,
 		md5:                md5,
+		uniqueID: 	    uniqueID,
 	}
 	peer.receivingFiles = peer.receivingFiles.add(file)
 	peer.receivingFiles = peer.receivingFiles.openForWriting(md5)
@@ -109,13 +107,9 @@ func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 
 func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
 	md5 := string(fileInfoMsg[10:42])
-	fmt.Println("File acceptance message received", fileInfoMsg)
-	fmt.Println("Name length: ", int(fileInfoMsg[1]))
-	fmt.Println("File length: ", binary.BigEndian.Uint64(fileInfoMsg[2:10]))
-	fmt.Println("File md5: ", md5)
-	fmt.Println("File name: ", string(fileInfoMsg[42:]))
+	uniqueID := binary.BigEndian.Uint32(fileInfoMsg[42:46])
 	peer.sendingFiles = peer.sendingFiles.updateAfterHandshake(md5)
-	go peer.sendFileData(md5)
+	go peer.sendFileData(uniqueID)
 }
 
 func (peer *Peer) transferFile() {}
@@ -193,17 +187,17 @@ func (peer Peer) getIPWithoutPort() string {
 }
 
 func (peer *Peer) sendFile(filePath string) {
-	file, _ := newFile(filePath)
-	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5)
+	file, _ := newFile(strings.TrimSpace(filePath))
+	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5, file.uniqueID)
 	peer.sendingFiles = peer.sendingFiles.add(file)
 	peer.sendMessage(fileMsg)
 }
 
-func (peer *Peer) sendFileData(md5 string) {
-	fileToSend := peer.sendingFiles.get(md5)
+func (peer *Peer) sendFileData(uniqueID uint32) {
+	fileToSend := peer.sendingFiles.get(uniqueID)
 	nextBytes := fileToSend.getNextBytes()
 	for len(nextBytes) > 0 {
-		fileDataMsg := getFileDataMsg(nextBytes, fileToSend.md5)
+		fileDataMsg := getFileDataMsg(nextBytes, fileToSend.uniqueID)
 		peer.sendMessage(fileDataMsg)
 		peer.sendingFiles = peer.sendingFiles.update(fileToSend)
 		nextBytes = fileToSend.getNextBytes()
@@ -211,8 +205,8 @@ func (peer *Peer) sendFileData(md5 string) {
 }
 
 func (peer *Peer) fileDataHandler(fileDataMsg []byte) {
-	md5, fileData := extractFileDataFromMsg(fileDataMsg)
-	fileToWrite := peer.receivingFiles.get(md5)
+	uniqueID, fileData := extractFileDataFromMsg(fileDataMsg)
+	fileToWrite := peer.receivingFiles.get(uniqueID)
 	fileToWrite.writeBytes(fileData)
 	peer.receivingFiles = peer.receivingFiles.update(fileToWrite)
 }

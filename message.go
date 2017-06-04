@@ -1,6 +1,7 @@
 package main
 
 import ()
+import "encoding/binary"
 
 func getPingMsg() []byte {
 	pingMsg := make([]byte, 5)
@@ -28,7 +29,7 @@ func extractChatMsg(chatMsg []byte) []byte {
 	return chatMsg[1:]
 }
 
-func getFileInfoMsg(fileLen uint64, fileName string, md5 string) []byte {
+func getFileInfoMsg(fileLen uint64, fileName string, md5 string, uniqueID uint32) []byte {
 	fileNameLen := uint8(len(fileName))
 	fileMsgLen := 10 + fileNameLen + 32
 	fileMsg := make([]byte, fileMsgLen+4)
@@ -37,24 +38,25 @@ func getFileInfoMsg(fileLen uint64, fileName string, md5 string) []byte {
 	fileMsg[5] = fileNameLen
 	getBytesFromUint64(fileMsg[6:], fileLen)
 	copy(fileMsg[14:], md5)
-	copy(fileMsg[46:], fileName)
+	getBytesFromUint32(fileMsg[46:50], uniqueID)
+	copy(fileMsg[50:], fileName)
 	return fileMsg
 }
 
-func getFileDataMsg(fileData []byte, md5 string) []byte {
+func getFileDataMsg(fileData []byte, uniqueID uint32) []byte {
 	fileDataMsg := make([]byte, 4+len(fileData)+32)
 	msgLen := len(fileData) + 32
 	getBytesFromUint32(fileDataMsg[0:4], uint32(msgLen))
 	fileDataMsg[4] = 5
-	copy(fileDataMsg[5:37], md5)
+	getBytesFromUint32(fileDataMsg[5:37], uniqueID)
 	copy(fileDataMsg[37:], fileData)
 	return fileDataMsg
 }
 
-func extractFileDataFromMsg(fileMsg []byte) (string, []byte) {
-	md5 := string(fileMsg[0:32])
-	fileData := fileMsg[32:]
-	return md5, fileData
+func extractFileDataFromMsg(fileMsg []byte) (uint32, []byte) {
+	uniqueID := binary.BigEndian.Uint32(fileMsg[1:33])
+	fileData := fileMsg[33:]
+	return uniqueID, fileData
 }
 
 func getMsgType(msg []byte) string {
