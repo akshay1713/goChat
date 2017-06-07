@@ -41,6 +41,7 @@ func initUDPBroadcast(ListenerAddr net.Addr, chatType byte, port string) net.Add
 			}
 			time.Sleep(time.Second * 1)
 		}
+		fmt.Println("Finished broadcasting")
 	}()
 	return LocalAddr
 }
@@ -86,7 +87,7 @@ func listenForUDPBroadcast(ServerConn *net.UDPConn, possibleLocalAddrs []string,
 			all_ips = append(all_ips, 0)
 			all_ips = append(all_ips, msgLengthBytes...)
 			all_ips = append(all_ips, portBytes...)
-			fmt.Println(peerIPs)
+			//fmt.Println(peerIPs)
 			for i := range peerIPs {
 				splitAddress := strings.Split(peerIPs[i], ":")
 				peer_portBytes := make([]byte, 2)

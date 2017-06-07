@@ -197,7 +197,11 @@ func (peer Peer) getIPWithoutPort() string {
 //sendFile sends a file info message to a peer, containing information regarding the file which needs to be sent
 //The actual file isn't sent until a file acceptance message is received from the peer
 func (peer *Peer) sendFile(filePath string) {
-	file, _ := newFile(strings.TrimSpace(filePath))
+	file, err := newFile(strings.TrimSpace(filePath))
+	if err != nil {
+		fmt.Println("Err while sending file: ", err,"\nAre you sure the file exists?")
+		return
+	}
 	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5, file.uniqueID)
 	peer.sendingFiles = peer.sendingFiles.add(file)
 	peer.sendMessage(fileMsg)

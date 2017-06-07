@@ -12,6 +12,7 @@ type PeerManager struct {
 	connectedPeers map[string]*Peer
 }
 
+
 func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool, username string) Peer {
 	if initiated {
 		conn.Write([]byte{1})
