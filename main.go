@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
+	"io"
+	"encoding/binary"
 	"strings"
 )
 
@@ -29,25 +32,46 @@ func main() {
 	closeChan := make(chan Peer)
 	peerManager := PeerManager{closeChan: closeChan, connectedPeers: peerConnections}
 	go peerManager.init()
-	go waitForTCP(peerManager, l, *usernamePtr)
-	candidatePorts := []string{"7041", "7042"}
-	var ServerConn *net.UDPConn
-	ListenerAddr := l.Addr()
-	possibleLocalAddrs := make([]string, len(candidatePorts))
-	for i := range candidatePorts {
-		ServerAddr, err := net.ResolveUDPAddr("udp", ":"+candidatePorts[i])
-		if ServerConn == nil {
-			ServerConn, err = net.ListenUDP("udp", ServerAddr)
-		}
-		tempLocalAddr := initUDPBroadcast(ListenerAddr, byte(0), candidatePorts[i])
-		if err != nil {
-			fmt.Println("Err while listening to the address", err)
-		} else {
-			possibleLocalAddrs = append(possibleLocalAddrs, tempLocalAddr.String())
-		}
-	}
-	tcpListenerAddr := strings.Split(l.Addr().String(), ":")
-	port, _ := strconv.Atoi(tcpListenerAddr[len(tcpListenerAddr)-1])
-	go listenForUDPBroadcast(ServerConn, possibleLocalAddrs, peerManager, port, byte(0))
+	initDiscovery(peerManager, usernamePtr, l)
 	startCli(&peerManager)
+}
+
+func initDiscovery(peerManager PeerManager, usernamePtr *string, l net.Listener){
+	candidatePorts := []string{"7041", "7042"}
+	connChan := make(chan ConnAndType)
+	go func(){
+		for connAndType := range connChan{
+			switch connAndType.Type {
+			case "sender":
+				currentTimestamp := uint32(time.Now().UTC().Unix())
+				peerManager.addNewPeer(connAndType.Connection, currentTimestamp, true, *usernamePtr)
+			case "receiver":
+				recvdTimestampBytes := make([]byte, 4)
+				_, err := io.ReadFull(connAndType.Connection, recvdTimestampBytes)
+				handleErr(err, "While getting timestamp")
+				recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
+				peerManager.addNewPeer(connAndType.Connection, recvdTimestamp, false, *usernamePtr)
+			case "duplicate_receiver":
+				recvdTimestampBytes := make([]byte, 4)
+				_, err := io.ReadFull(connAndType.Connection, recvdTimestampBytes)
+				handleErr(err, "While getting timestamp")
+				recvdTimestamp := binary.BigEndian.Uint32(recvdTimestampBytes)
+				senderIPString := strings.Split(connAndType.Connection.RemoteAddr().String(), ":")[0]
+				peerManager.compareTimestampAndUpdate(connAndType.Connection, recvdTimestamp, senderIPString)
+			}
+		}
+	}()
+	go waitForTCP(peerManager, l, connChan)
+	toSendPort := strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
+	portInt, _ := strconv.Atoi(toSendPort)
+	udpBroadcaster := UDPBroadcaster{ports: candidatePorts, appName: "goChat"}
+	broadcastListenerConn := udpBroadcaster.init(peerManager)
+	possibleLocalPorts := udpBroadcaster.broadcastOnAllPorts(toSendPort)
+	udpListener := UDPListener{
+		listenerPort:       portInt,
+		listenerConn:       broadcastListenerConn,
+		possibleLocalAddrs: possibleLocalPorts,
+		appName: 	    "goChat",
+	}
+	go udpListener.listenForUDPBroadcast(peerManager)
 }
