@@ -97,7 +97,7 @@ func (peer *Peer) fileInfoHandler(fileInfoMsg []byte) {
 		transferredSize:    0,
 		handshake_complete: true,
 		md5:                md5,
-		uniqueID: 	    uniqueID,
+		uniqueID:           uniqueID,
 	}
 	peer.receivingFiles = peer.receivingFiles.add(file)
 	peer.receivingFiles = peer.receivingFiles.openForWriting(md5)
@@ -117,7 +117,6 @@ func (peer *Peer) fileAcceptHandler(fileInfoMsg []byte) {
 	peer.sendingFiles = peer.sendingFiles.updateAfterHandshake(md5)
 	go peer.sendFileData(uniqueID)
 }
-
 
 //createMsgChan creates a chan into which all the messages sent by a peer will be sent
 func (peer *Peer) createMsgChan() {
@@ -199,7 +198,7 @@ func (peer Peer) getIPWithoutPort() string {
 func (peer *Peer) sendFile(filePath string) {
 	file, err := newFile(strings.TrimSpace(filePath))
 	if err != nil {
-		fmt.Println("Err while sending file: ", err,"\nAre you sure the file exists?")
+		fmt.Println("Err while sending file: ", err, "\nAre you sure the file exists?")
 		return
 	}
 	fileMsg := getFileInfoMsg(file.fileSize, file.getFileName(), file.md5, file.uniqueID)

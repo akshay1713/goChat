@@ -12,7 +12,6 @@ type PeerManager struct {
 	connectedPeers map[string]*Peer
 }
 
-
 func (peerManager PeerManager) addNewPeer(conn *net.TCPConn, currentTimestamp uint32, initiated bool, username string) Peer {
 	if initiated {
 		conn.Write([]byte{1})
@@ -45,7 +44,7 @@ func (peerManager PeerManager) init() {
 	}
 }
 
-func (peerManager PeerManager) isConnected(IP string) bool {
+func (peerManager PeerManager) IsConnected(IP string) bool {
 	if _, exists := peerManager.connectedPeers[IP]; exists {
 		return true
 	}
@@ -61,7 +60,7 @@ func (peerManager PeerManager) sendMessage(message string) {
 	}
 }
 
-func (peerManager PeerManager) getAllIPs() []string {
+func (peerManager PeerManager) GetAllIPs() []string {
 	var peerIPs []string
 	for _, peer := range peerManager.connectedPeers {
 		peerIPs = append(peerIPs, peer.getIPWithPort())
